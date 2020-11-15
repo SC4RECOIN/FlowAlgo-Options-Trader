@@ -251,7 +251,7 @@ def run_test(
         if occurences[row.Ticker] < call_occurences:
             continue
 
-        if row.Premium > min_premium or row.Premium < max_premium:
+        if row.Premium > max_premium or row.Premium < min_premium:
             continue
 
         # does not exceed min time of day

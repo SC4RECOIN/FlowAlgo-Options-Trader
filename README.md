@@ -1,19 +1,20 @@
 # FlowAlgo-Trader
 
-Trade on option flow from [flowalgo.com](http://flowalgo.com/) with live testing using Alpaca.
+Trade on option flow from [flowalgo.com](http://flowalgo.com/) with live testing using [Alpaca](https://alpaca.markets/).
 
 ## Strategy
 
-The stategy involves pulling option flow and trading using a rules-based algorithm. Everytime an option is received, check if it passes all rule requirements and then take a position in the underlying asset.
+The stategy involves pulling option flow and trading using a rules-based algorithm. The model will take a positions in the underlying asset if is seen enough times and passes a set of rules.
 
 Potential rules:
 | rule | default | note |
-|---------------------|---------|---------------------------------------------------------|
+|-- ---|---------|------|
 | min_time | 9:45 | Ignore options before this time. |
 | sell_after_gain | 0.15 | Sell position eod after gain |
 | sell_after_loss | -0.06 | Sell position eod after loss |
 | sell_perc_to_expiry | 1 | Sell when % days to expiry is reached |
 | top_n_tickers | 50 | Only consider top n stocks in terms of option frequency |
+| duplicate_pos | True | Take position of already in that stock |
 | put_penalty | -1 | Penalty to frequency when PUT contract is seen |
 | call_occurences | 2 | Minimum number of calls before considering |
 | cp_ratio_min | 0 | Minimum overall call/put ratio |
@@ -21,10 +22,13 @@ Potential rules:
 | min_premium | 20000 | Minimum premium for option contracts |
 | max_premium | 1000000 | Maximum premium for option contracts |
 | unusual_only | False | Only consider options flagged as unusual |
+| allow_SWEEP | True | Consider SWEEP order types |
+| allow_BLOCK | True | Consider BLOCK order types |
+| allow_SPLIT | True | Consider SPLIT order types |
 | spy_ema | True | Only trade if SPY is above EMA |
 | spy_ema_val | 13 | EMA window if spy_ema is True |
 
-This is only a LONG strategy. Finding short positions has proven to be much more difficult and hasn't showed much promise in backtesting. Also note that option data does not indicate any consensus on market direction as options are often used to hedge other positions. Another consideration is that many options will be part of a options trade that is constructed with more than one option type, strike price, or expiration date on the same underlying asset. Therefore, a large PUT contract could be a bearish position or it could be bullish as it could be hedging a long position or be part of a option combo.
+There are many more rules you could encode (such as how far otm a contract is). This is only a LONG strategy. Finding short positions has proven to be much more difficult and hasn't showed much promise in backtesting. Also note that option data does not indicate any consensus on market direction as options are often used to hedge other positions. Another consideration is that many options will be part of a options trade that is constructed with more than one option type, strike price, or expiration date on the same underlying asset. Therefore, a large PUT contract could be a bearish position or it could be bullish as it could be hedging a long position or be part of a options combo.
 
 ## BackTest
 
@@ -42,8 +46,6 @@ FLOW_PASS=password
 APCA_API_BASE_URL="https://paper-api.alpaca.markets"
 APCA_API_KEY_ID=key
 APCA_API_SECRET_KEY=secret
-IEX_TOKEN=sk_token
-IEX_API="https://cloud.iexapis.com/v1/"
 ```
 
-AlgoFlow credentials are required for scraping option flow, Alpaca credentials are required for backtesting, and the IEXCloud credentials are required the the stock split helper.
+AlgoFlow credentials are required for scraping option flow and the Alpaca credentials are required for backtesting

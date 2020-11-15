@@ -1,2 +1,5 @@
 .env
 .vscode
+hist_data
+.DS_Store
+*.pkl

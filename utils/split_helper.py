@@ -1,11 +1,9 @@
 from iexfinance.stocks import Stock
 import arrow
-from dotenv import load_dotenv
 import os
 import json
 import math
 
-load_dotenv()
 if not os.path.exists("cache"):
     os.makedirs("cache")
 

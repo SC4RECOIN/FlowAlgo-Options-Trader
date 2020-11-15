@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import json
 import arrow
 from tqdm import tqdm
 from collections import Counter
@@ -8,9 +9,20 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import alpaca_trade_api as tradeapi
+from utils.split_helper import split_adjust_multiplier
 
 load_dotenv()
 alpaca = tradeapi.REST()
+
+if not os.path.exists("cache"):
+    os.makedirs("cache")
+
+# stock price cache
+if not os.path.exists("cache/prices.json"):
+    price_cache = {}
+else:
+    with open("cache/prices.json") as f:
+        price_cache = json.load(f)
 
 
 def clean_df(df, use_cache=True):
@@ -26,9 +38,6 @@ def clean_df(df, use_cache=True):
     3  6/13/17  2017-06-13T22:51:41.968Z     PE  07/17(M)     30  Call   28.61  2000  0.698850  SWEEP   2259   3054.0  $139,769  ETF/ETN   False
     4  6/13/17  2017-06-13T22:49:01.261Z    SPY  07/07/17  244.5  Call  244.45   908  1.270000  SWEEP   1932   1684.0  $115,316  ETF/ETN   False
     """
-    if not os.path.exists("cache"):
-        os.makedirs("cache")
-
     if use_cache and os.path.exists("cache/hist_options.pkl"):
         return pd.read_pickle("cache/hist_options.pkl")
 
@@ -79,14 +88,33 @@ def clean_df(df, use_cache=True):
 
 
 def get_price(symbol, time):
-    start = time.isoformat()
-    end = time.shift(days=1).isoformat()
-    quotes = alpaca.get_barset([symbol], "1D", start=start, end=end)
-    return quotes["SPY"][-1].c
+    day = time.format("YYYY-MM-DD")
+    cache_key = f"{symbol}{day}"
+
+    if cache_key in price_cache:
+        close = price_cache[cache_key]
+    else:
+        start = time.isoformat()
+        end = time.shift(days=1).isoformat()
+        quotes = alpaca.get_barset([symbol], "1D", start=start, end=end)
+        close = quotes[symbol][-1].c
+
+        # cache value
+        price_cache[cache_key] = close
+        with open("cache/prices.json", "w") as f:
+            json.dump(price_cache, f, indent=4)
+
+    # price adj has its own cache
+    return split_adjust_multiplier(symbol, time) * close
 
 
 def holdings_value(holdings, date):
-    return 1
+    value = 0
+    for holding in holdings:
+        curr_price = get_price(holding["ticker"], date)
+        value += holding["quantity"] * curr_price
+
+    return value
 
 
 def moving_average(a, n=3):
@@ -220,7 +248,7 @@ def run_test(
             continue
 
         # enough calls on this ticker
-        if occurences[row["Ticker"]] < call_occurences:
+        if occurences[row.Ticker] < call_occurences:
             continue
 
         if row.Premium > min_premium or row.Premium < max_premium:
@@ -321,12 +349,10 @@ def run_test(
 
 
 if __name__ == "__main__":
-    # data_dir = "hist_data"
-    # df = pd.concat(
-    #     [pd.read_csv(f"{data_dir}/{filename}") for filename in os.listdir(data_dir)]
-    # )
-    # df = clean_df(df)
-    # print(f"entries: {len(df)}\nrunning backtest")
-    # run_test(df)
-
-    print(get_price("SPY", arrow.get("2020-11-10")))
+    data_dir = "hist_data"
+    df = pd.concat(
+        [pd.read_csv(f"{data_dir}/{filename}") for filename in os.listdir(data_dir)]
+    )
+    df = clean_df(df)
+    print(f"entries: {len(df)}\nrunning backtest")
+    run_test(df)

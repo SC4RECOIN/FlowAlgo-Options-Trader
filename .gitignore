@@ -3,3 +3,5 @@
 hist_data
 .DS_Store
 *.pkl
+*.png
+cache

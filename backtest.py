@@ -6,6 +6,11 @@ from collections import Counter
 import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+import alpaca_trade_api as tradeapi
+
+load_dotenv()
+alpaca = tradeapi.REST()
 
 
 def clean_df(df, use_cache=True):
@@ -21,8 +26,11 @@ def clean_df(df, use_cache=True):
     3  6/13/17  2017-06-13T22:51:41.968Z     PE  07/17(M)     30  Call   28.61  2000  0.698850  SWEEP   2259   3054.0  $139,769  ETF/ETN   False
     4  6/13/17  2017-06-13T22:49:01.261Z    SPY  07/07/17  244.5  Call  244.45   908  1.270000  SWEEP   1932   1684.0  $115,316  ETF/ETN   False
     """
-    if use_cache and os.path.exists("hist_options.pkl"):
-        return pd.read_pickle("hist_options.pkl")
+    if not os.path.exists("cache"):
+        os.makedirs("cache")
+
+    if use_cache and os.path.exists("cache/hist_options.pkl"):
+        return pd.read_pickle("cache/hist_options.pkl")
 
     print("cleaning and converting df")
     dates, expiries, rows, premium = [], [], [], []
@@ -66,16 +74,19 @@ def clean_df(df, use_cache=True):
     df = df.sort_values("Time")
     df.index = index
 
-    df.to_pickle("hist_options.pkl")
+    df.to_pickle("cache/hist_options.pkl")
     return df
 
 
 def get_price(symbol, time):
-    return 0
+    start = time.isoformat()
+    end = time.shift(days=1).isoformat()
+    quotes = alpaca.get_barset([symbol], "1D", start=start, end=end)
+    return quotes["SPY"][-1].c
 
 
 def holdings_value(holdings, date):
-    return 0
+    return 1
 
 
 def moving_average(a, n=3):
@@ -309,10 +320,13 @@ def run_test(
     plt.savefig(f"run_results.png")
 
 
-# import data
-data_dir = "hist_data"
-frames = [pd.read_csv(f"{data_dir}/{filename}") for filename in os.listdir(data_dir)]
-df = pd.concat(frames)
-df = clean_df(df)
-print("entries:", len(df))
-print(df.head())
+if __name__ == "__main__":
+    # data_dir = "hist_data"
+    # df = pd.concat(
+    #     [pd.read_csv(f"{data_dir}/{filename}") for filename in os.listdir(data_dir)]
+    # )
+    # df = clean_df(df)
+    # print(f"entries: {len(df)}\nrunning backtest")
+    # run_test(df)
+
+    print(get_price("SPY", arrow.get("2020-11-10")))

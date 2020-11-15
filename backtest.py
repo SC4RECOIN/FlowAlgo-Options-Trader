@@ -215,7 +215,8 @@ def run_test(
                     sell_price = holding["entry"]
                     print(
                         f"WARNING: irregular price change: {holding['entry']} to {sell_price} "
-                        f"({holding['ticker']}) on {prev_day.format('YYYY-MM-DD')}"
+                        f"({holding['ticker']}) on {prev_day.format('YYYY-MM-DD')}. "
+                        "Ignoring position results"
                     )
 
                 cost = holding["entry"] * holding["quantity"]

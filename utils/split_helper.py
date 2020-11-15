@@ -20,9 +20,12 @@ def split_adjust_multiplier(symbol, date):
         with open(path) as f:
             splits = json.load(f)
     else:
-        splits = get_splits(symbol)
-        with open(path, "w") as f:
-            json.dump(splits, f, indent=4)
+        try:
+            splits = get_splits(symbol)
+            with open(path, "w") as f:
+                json.dump(splits, f, indent=4)
+        except:
+            return 1
 
     splits = set([(arrow.get(s["exDate"]), s["toFactor"]) for s in splits])
     splits = filter(lambda s: s[0] > date, splits)

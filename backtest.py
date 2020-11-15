@@ -13,6 +13,10 @@ from utils.split_helper import split_adjust_multiplier
 
 load_dotenv()
 alpaca = tradeapi.REST()
+tradable_assets = [
+    asset.symbol for asset in alpaca.list_assets(status="active") if asset.tradable
+]
+
 
 if not os.path.exists("cache"):
     os.makedirs("cache")
@@ -92,8 +96,9 @@ def get_price(symbol, time):
     cache_key = f"{symbol}{day}"
 
     if cache_key in price_cache:
-        close = price_cache[cache_key]
-    else:
+        return price_cache[cache_key]
+
+    try:
         start = time.isoformat()
         end = time.shift(days=1).isoformat()
         quotes = alpaca.get_barset([symbol], "1D", start=start, end=end)
@@ -103,9 +108,11 @@ def get_price(symbol, time):
         price_cache[cache_key] = close
         with open("cache/prices.json", "w") as f:
             json.dump(price_cache, f, indent=4)
+    except:
+        print(f"Error getting price for {symbol}")
+        raise
 
-    # price adj has its own cache
-    return split_adjust_multiplier(symbol, time) * close
+    return close
 
 
 def holdings_value(holdings, date):
@@ -174,6 +181,10 @@ def run_test(
     for index, row in tqdm(df.iterrows(), total=len(df)):
         date = row.Time
 
+        # not tradable
+        if row.Ticker not in tradable_assets:
+            continue
+
         counter[row.Ticker] += 1
         counts = counter.most_common(top_n_tickers)
 
@@ -199,6 +210,13 @@ def run_test(
 
             for idx, holding in enumerate(holdings):
                 sell_price = get_price(holding["ticker"], prev_day)
+
+                if abs(sell_price / holding["entry"] - 1) > 0.5:
+                    sell_price = holding["entry"]
+                    print(
+                        f"WARNING: irregular price change: {holding['entry']} to {sell_price} "
+                        f"({holding['ticker']}) on {prev_day.format('YYYY-MM-DD')}"
+                    )
 
                 cost = holding["entry"] * holding["quantity"]
                 value = sell_price * holding["quantity"]

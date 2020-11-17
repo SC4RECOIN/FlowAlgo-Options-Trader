@@ -92,36 +92,34 @@ def clean_df(df, use_cache=True):
 
 
 def get_price(symbol, time):
+    return get_prices([symbol], time)[symbol]
+
+
+def get_prices(symbols, time):
     day = time.format("YYYY-MM-DD")
-    cache_key = f"{symbol}{day}"
 
-    if cache_key in price_cache:
-        return price_cache[cache_key]
-
-    try:
+    # if any prices are missing from the cache
+    if any([f"{symbol}{day}" not in price_cache for symbol in symbols]):
+        symbols.append("SPY")
         start = time.isoformat()
         end = time.shift(days=1).isoformat()
-        quotes = alpaca.get_barset([symbol], "1D", start=start, end=end)
-        close = quotes[symbol][-1].c
+        quotes = alpaca.get_barset(symbols, "1D", start=start, end=end)
 
-        # cache value
-        price_cache[cache_key] = close
+        # cache values
+        values = {f"{symbol}{day}": quotes[symbol][-1].c for symbol in symbols}
+        price_cache.update(values)
         with open("cache/prices.json", "w") as f:
             json.dump(price_cache, f, indent=4)
-    except:
-        print(f"Error getting price for {symbol}")
-        raise
 
-    return close
+        return {symbol: quotes[symbol][-1].c for symbol in symbols}
+
+    # fetch from cache
+    return {symbol: price_cache[f"{symbol}{day}"] for symbol in symbols}
 
 
 def holdings_value(holdings, date):
-    value = 0
-    for holding in holdings:
-        curr_price = get_price(holding["ticker"], date)
-        value += holding["quantity"] * curr_price
-
-    return value
+    prices = get_prices([h["ticker"] for h in holdings], date)
+    return sum([h["quantity"] * prices[h["ticker"]] for h in holdings])
 
 
 def moving_average(a, n=3):

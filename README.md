@@ -8,7 +8,7 @@ The stategy involves pulling option flow and trading using a rules-based algorit
 
 Potential rules:
 | rule | default | note |
-|-- ---|---------|------|
+| ---- | ------- | ---- |
 | min_time | 9:45 | Ignore options before this time. |
 | sell_after_gain | 0.15 | Sell position eod after gain |
 | sell_after_loss | -0.06 | Sell position eod after loss |
@@ -34,7 +34,22 @@ There are many more rules you could encode (such as how far otm a contract is). 
 
 Historical option flow can be downloaded from [flowalgo.com/options-export-beta](https://app.flowalgo.com/options-export-beta/). Put all downloaded CSVs in the `hist_data` directory and run `backtest.py`. See `run_test()` for backtesting parameters. The defaults are parameters I have chosen were chosen using grid search.
 
-WARNING: The backfill results are due to overfitting via parameter selection. The model should be testing on more unseen data before trusting results
+### Results
+
+![alt text](docs/results.png "Backtest results")
+
+| metric            | score                            |
+| ----------------- | -------------------------------- |
+| balance           | \$25,000 -> \$110,261            |
+| return            | 341.04%                          |
+| annualized return | 55.05%                           |
+| average loss      | -1.3739%                         |
+| sharpe ratio      | 173.81                           |
+| sortino ratio     | 286.32                           |
+| IR                | 2.361                            |
+| biggest drawdown  | -31.38% ($27892.97 to $19138.93) |
+
+WARNING: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results
 
 ### env
 

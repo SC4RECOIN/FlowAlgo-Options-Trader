@@ -6,3 +6,4 @@ hist_data
 *.png
 cache
 __pycache__
+!results.png

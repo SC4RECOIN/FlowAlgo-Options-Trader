@@ -101,7 +101,7 @@ def get_prices(symbols, time):
     # if any prices are missing from the cache
     if any([f"{symbol}{day}" not in price_cache for symbol in symbols]):
         symbols.append("SPY")
-        start = time.isoformat()
+        start = time.shift(days=-1).isoformat()
         end = time.shift(days=1).isoformat()
         quotes = alpaca.get_barset(symbols, "1D", start=start, end=end)
 

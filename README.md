@@ -49,7 +49,7 @@ Historical option flow can be downloaded from [flowalgo.com/options-export-beta]
 | IR                | 2.361                            |
 | biggest drawdown  | -31.38% ($27892.97 to $19138.93) |
 
-NOTE: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results. Also note that the model did not perform well in 2017 and 2018. Much of the gains were obtained during the market volatilities induced by COVID-19.
+NOTE: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results. Also note that the model did not perform well in 2017 and 2018. Much of the gains were obtained during the market volatility induced by COVID-19.
 
 ### env
 

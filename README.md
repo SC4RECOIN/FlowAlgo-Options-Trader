@@ -63,4 +63,4 @@ APCA_API_KEY_ID=key
 APCA_API_SECRET_KEY=secret
 ```
 
-AlgoFlow credentials are required for scraping option flow and the Alpaca credentials are required for backtesting
+FlowAlgo credentials are required for scraping option flow and the Alpaca credentials are required for backtesting

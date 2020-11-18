@@ -9,7 +9,6 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import alpaca_trade_api as tradeapi
-from utils.split_helper import split_adjust_multiplier
 
 load_dotenv()
 alpaca = tradeapi.REST()

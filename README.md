@@ -46,8 +46,6 @@ Historical option flow can be downloaded from [flowalgo.com/options-export-beta]
 | return            | 341.04%                          |
 | annualized return | 55.05%                           |
 | average loss      | -1.3739%                         |
-| sharpe ratio      | 173.81                           |
-| sortino ratio     | 286.32                           |
 | IR                | 2.361                            |
 | biggest drawdown  | -31.38% ($27892.97 to $19138.93) |
 

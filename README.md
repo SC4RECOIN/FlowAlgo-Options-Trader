@@ -1,10 +1,10 @@
-# FlowAlgo-Trader
+# FlowAlgo Trader
 
-Trade on option flow from [flowalgo.com](http://flowalgo.com/) with live testing using [Alpaca](https://alpaca.markets/).
+Trade on options flow from [flowalgo.com](http://flowalgo.com/) with live testing using [Alpaca](https://alpaca.markets/).
 
 ## Strategy
 
-The stategy involves pulling option flow and trading using a rules-based algorithm. The model will take a positions in the underlying asset if is seen enough times and passes a set of rules.
+The stategy involves pulling options flow and trading on it using a rules-based algorithm. The model will take a positions in the underlying asset if it is seen enough times and passes a set of rules. All metrics and rules are only applied to options seen that day.
 
 Potential rules:
 | rule | default | note |
@@ -14,7 +14,7 @@ Potential rules:
 | sell_after_loss | -0.06 | Sell position eod after loss |
 | sell_perc_to_expiry | 1 | Sell when % days to expiry is reached |
 | top_n_tickers | 50 | Only consider top n stocks in terms of option frequency |
-| duplicate_pos | True | Take position of already in that stock |
+| duplicate_pos | True | Take position if already in that stock |
 | put_penalty | -1 | Penalty to frequency when PUT contract is seen |
 | call_occurences | 2 | Minimum number of calls before considering |
 | cp_ratio_min | 0 | Minimum overall call/put ratio |
@@ -32,7 +32,7 @@ There are many more rules you could encode (such as how far otm a contract is). 
 
 ## BackTest
 
-Historical option flow can be downloaded from [flowalgo.com/options-export-beta](https://app.flowalgo.com/options-export-beta/). Put all downloaded CSVs in the `hist_data` directory and run `backtest.py`. See `run_test()` for backtesting parameters. The defaults are parameters I have chosen were chosen using grid search.
+Historical option flow can be downloaded from [flowalgo.com/options-export-beta](https://app.flowalgo.com/options-export-beta/). Put all downloaded CSVs in the `hist_data` directory and run `backtest.py`. See `run_test()` for backtesting parameters. The defaults are parameters I have chosen using grid search.
 
 ### Results
 
@@ -49,7 +49,7 @@ Historical option flow can be downloaded from [flowalgo.com/options-export-beta]
 | IR                | 2.361                            |
 | biggest drawdown  | -31.38% ($27892.97 to $19138.93) |
 
-WARNING: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results
+NOTE: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results. Also note that the model did not perform well in 2017 and 2018. Much of the gains were obtained during the market volatilities induced by COVID-19.
 
 ### env
 

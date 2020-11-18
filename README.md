@@ -2,6 +2,8 @@
 
 Trade on options flow from [flowalgo.com](http://flowalgo.com/) with live testing using [Alpaca](https://alpaca.markets/).
 
+🚧 Paper trader under construction 🚧
+
 ## Strategy
 
 The stategy involves pulling options flow and trading on it using a rules-based algorithm. The model will take a positions in the underlying asset if it is seen enough times and passes a set of rules. All metrics and rules are only applied to options seen that day.
@@ -49,7 +51,7 @@ Historical option flow can be downloaded from [flowalgo.com/options-export-beta]
 | IR                | 2.361                            |
 | biggest drawdown  | -31.38% ($27892.97 to $19138.93) |
 
-NOTE: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results. Also note that the model did not perform well in 2017 and 2018. Much of the gains were obtained during the market volatility induced by COVID-19.
+⚠️ NOTE: The backfill results are due to overfitting via parameter selection. The model should be tested on more unseen data before trusting results. Also note that the model did not perform well in 2017 and 2018. Much of the gains were obtained during the market volatility induced by COVID-19.
 
 ### env
 

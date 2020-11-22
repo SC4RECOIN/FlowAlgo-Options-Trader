@@ -1,0 +1,107 @@
+import schedule
+import time
+import asyncio
+import json
+from utils.broker import AlpacaClient
+from utils.options_scraper import Scraper, OptionEntry
+from dotenv import load_dotenv
+from typing import List
+from dataclasses import asdict
+from collections import Counter
+
+load_dotenv()
+TOP_N = 50
+CALL_COUNT = 2
+MIN_PREM = 20000
+MAX_PREM = 1000000
+MAX_DAYS_EXP = 7
+TARGET_SIZE = 0.1
+LEVERAGE = 2
+
+# await async functions
+complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
+
+alpaca = AlpacaClient()
+scraper = Scraper()
+complete(scraper.login())
+
+# keep track of options already seen
+options_hashset = []
+
+# keep track of frequency of symbol and options
+ticker_counter = Counter()
+calls_counter = Counter()
+
+
+def get_new(options: List[OptionEntry]):
+    hashes = [hash(frozenset(asdict(option).items())) for option in options]
+    hashes = [h for h in hashes if h not in options_hashset]
+    options_hashset.extend(hashes)
+    return hashes
+
+
+def trade_on_signals():
+    """
+    Fetch options and check for new positions
+    then wait 30s and repeat. Loop ends when market closes.
+    Function gets retriggered everyday.
+    """
+    spy_ema = 0
+
+    while not alpaca.is_market_about_to_close():
+        options = complete(scraper.get_options())
+        new_options = get_new(options)
+
+        for option in new_options:
+            # not tradable
+            if option.symbol not in alpaca.tradable_assets:
+                continue
+
+            ticker_counter[option.symbol] += 1
+            counts = ticker_counter.most_common(TOP_N)
+
+            # count calls and puts
+            inc = 1 if option.side == "CALLS" else -1
+            calls_counter[option.symbol] += inc
+
+            # not in top n tickers
+            if option.symbol not in [x[0] for x in counts]:
+                continue
+
+            if calls_counter[option.symbol] < CALL_COUNT:
+                continue
+
+            if option.premium > MAX_PREM or option.premium < MIN_PREM:
+                continue
+
+            days_to_expiry = 0
+            if days_to_expiry > MAX_DAYS_EXP:
+                continue
+
+            # SPY is under the EMA
+            if get_price("SPY") < spy_ema:
+                continue
+
+            # calculate position size
+            equity = float(alpaca.account["equity"])
+            qty = max(1, int(TARGET_SIZE * equity / option.spot))
+            pos_value = qty * option.spot
+
+            act = alpaca.api.get_account()
+            if pos_value > float(act["cash"]) * LEVERAGE:
+                print(f"cannot afford {qty} {option.symbol}")
+                continue
+
+            # enter position
+            alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
+
+        time.sleep(30)
+
+    # check for positions that need to be sold
+    alpaca.sell_all_positions()
+
+
+schedule.every().day.at("09:45").do(trade_on_signals)
+while True:
+    schedule.run_pending()
+    time.sleep(60)

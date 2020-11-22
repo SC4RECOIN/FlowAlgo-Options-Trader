@@ -13,7 +13,7 @@ class OptionEntry:
     side: str
     spot: float
     order_type: str
-    premium: float
+    premium: int
 
 
 class Scraper(object):
@@ -26,7 +26,7 @@ class Scraper(object):
         browser = await launch(headless=False)
         self.page = await browser.newPage()
         await self.page.goto("https://app.flowalgo.com/users/login")
-        await self.page.setViewport({'width': 1920, 'height': 1080})
+        await self.page.setViewport({"width": 1920, "height": 1080})
 
         # enter details and submit
         await self.page.type("input[name=amember_login]", self.email)
@@ -36,7 +36,8 @@ class Scraper(object):
         await self.page.waitForNavigation()
 
     async def get_options(self):
-        data = await self.page.evaluate("""() => {
+        data = await self.page.evaluate(
+            """() => {
             return [
                 'ticker',
                 'strike',
@@ -57,30 +58,32 @@ class Scraper(object):
 
         def parse_premium(premium: str) -> float:
             value = float(premium[1:-1])
-            return value * 1e6 if premium[-1] == 'M' else value * 1e3
+            return value * 1e6 if premium[-1] == "M" else value * 1e3
 
         options = []
         for entry in zip(*data):
-            options.append(OptionEntry(
-                symbol=entry[0],
-                time=entry[2],
-                expiration=entry[3],
-                strike=float(entry[1]),
-                side=entry[4],
-                spot=float(entry[8]),
-                order_type=entry[6],
-                premium=parse_premium(entry[7])
-            ))
-        
-        print(options)
+            options.append(
+                OptionEntry(
+                    symbol=entry[0],
+                    time=entry[2],
+                    expiration=entry[3],
+                    strike=float(entry[1]),
+                    side=entry[4],
+                    spot=float(entry[8]),
+                    order_type=entry[6],
+                    premium=parse_premium(entry[7]),
+                )
+            )
+
         return options
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
 
-    load_dotenv()  
+    load_dotenv()
     scraper = Scraper()
     complete(scraper.login())
     complete(scraper.get_options())

@@ -11,6 +11,12 @@ class AlpacaClient(object):
         self.account = self.api.get_account()
         self.positions = sorted([p.symbol for p in self.api.list_positions()])
 
+        self.tradable_assets = [
+            asset.symbol
+            for asset in self.api.list_assets(status="active")
+            if asset.tradable
+        ]
+
         # cap leverage
         self.leverage = 2
 

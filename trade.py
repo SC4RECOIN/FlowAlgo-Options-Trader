@@ -5,6 +5,7 @@ import json
 import numpy as np
 from utils.broker import AlpacaClient
 from utils.options_scraper import Scraper, OptionEntry
+from utils.storage import SQLiteStorage
 from dotenv import load_dotenv
 from typing import List
 import datetime as dt
@@ -26,6 +27,7 @@ SPY_EMA_MOVING = 13
 complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
 
 alpaca = AlpacaClient()
+storage = SQLiteStorage()
 scraper = Scraper()
 complete(scraper.login())
 
@@ -132,6 +134,10 @@ def trade_on_signals():
             # enter position
             print(f"submiting buy order for {qty} {option.symbol}")
             alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
+
+            with storage as sqlite:
+                sqlite.insert_option(option)
+
             time.sleep(0.5)
 
         time.sleep(30)

@@ -23,6 +23,9 @@ class AlpacaClient(object):
         # close any open orders
         self.api.cancel_all_orders()
 
+    def get_price(self, symbol: str) -> float:
+        return self.api.get_last_quote(symbol).bidprice
+
     def rebalance(self, symbols: List[str]) -> None:
         self.api.cancel_all_orders()
 

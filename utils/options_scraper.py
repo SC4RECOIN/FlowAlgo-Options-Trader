@@ -25,8 +25,11 @@ class Scraper(object):
     async def login(self):
         browser = await launch(headless=False)
         self.page = await browser.newPage()
-        await self.page.goto("https://app.flowalgo.com/users/login")
+        await self.page.setUserAgent(
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+        )
         await self.page.setViewport({"width": 1920, "height": 1080})
+        await self.page.goto("https://app.flowalgo.com/users/login")
 
         # enter details and submit
         await self.page.type("input[name=amember_login]", self.email)

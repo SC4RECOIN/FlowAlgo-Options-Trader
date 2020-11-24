@@ -2,6 +2,7 @@ import schedule
 import time
 import asyncio
 import json
+import numpy as np
 from utils.broker import AlpacaClient
 from utils.options_scraper import Scraper, OptionEntry
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ MAX_PREM = 1000000
 MAX_DAYS_EXP = 7
 TARGET_SIZE = 0.1
 LEVERAGE = 2
+SPY_EMA_MOVING = 13
 
 # await async functions
 complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
@@ -36,8 +38,25 @@ calls_counter = Counter()
 def get_new(options: List[OptionEntry]):
     hashes = [hash(frozenset(asdict(option).items())) for option in options]
     hashes = [h for h in hashes if h not in options_hashset]
+
+    new_options = [
+        options[idx] for idx, h in enumerate(hashes) if h not in options_hashset
+    ]
     options_hashset.extend(hashes)
-    return hashes
+
+    return new_options
+
+
+def get_spy_moving_avg(n=SPY_EMA_MOVING):
+    quotes = alpaca.api.get_barset(["SPY"], "1D", limit=20)
+    closes = [quote.c for quote in quotes["SPY"]]
+
+    a = np.array(closes)
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    avgs = ret[n - 1 :] / n
+
+    return avgs[-1]
 
 
 def trade_on_signals():
@@ -46,11 +65,12 @@ def trade_on_signals():
     then wait 30s and repeat. Loop ends when market closes.
     Function gets retriggered everyday.
     """
-    spy_ema = 0
+    spy_ema = get_spy_moving_avg()
 
     while not alpaca.is_market_about_to_close():
         options = complete(scraper.get_options())
         new_options = get_new(options)
+        print(f"{len(new_options)} new options")
 
         for option in new_options:
             # not tradable
@@ -79,21 +99,23 @@ def trade_on_signals():
                 continue
 
             # SPY is under the EMA
-            if get_price("SPY") < spy_ema:
+            if alpaca.get_price("SPY") < spy_ema:
                 continue
 
             # calculate position size
-            equity = float(alpaca.account["equity"])
+            act = alpaca.api.get_account()
+            equity = float(act.equity)
             qty = max(1, int(TARGET_SIZE * equity / option.spot))
             pos_value = qty * option.spot
 
-            act = alpaca.api.get_account()
-            if pos_value > float(act["cash"]) * LEVERAGE:
+            if pos_value > float(act.cash) * LEVERAGE:
                 print(f"cannot afford {qty} {option.symbol}")
                 continue
 
             # enter position
+            print(f"submiting buy order for {qty} {option.symbol}")
             alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
+            time.sleep(0.5)
 
         time.sleep(30)
 

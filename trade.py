@@ -7,6 +7,8 @@ from utils.broker import AlpacaClient
 from utils.options_scraper import Scraper, OptionEntry
 from dotenv import load_dotenv
 from typing import List
+import datetime as dt
+import arrow
 from dataclasses import asdict
 from collections import Counter
 
@@ -59,6 +61,15 @@ def get_spy_moving_avg(n=SPY_EMA_MOVING):
     return avgs[-1]
 
 
+def parse_expiry(exp: str) -> str:
+    if exp[2] == "/":
+        s = [int(x) for x in exp.split("/")]
+        ds = f"20{s[2]}-{s[0]:02}-{s[1]:02}"
+        return arrow.get(ds).format("YYYY-MM-DD")
+
+    return arrow.get(exp).format("YYYY-MM-DD")
+
+
 def trade_on_signals():
     """
     Fetch options and check for new positions
@@ -66,6 +77,7 @@ def trade_on_signals():
     Function gets retriggered everyday.
     """
     spy_ema = get_spy_moving_avg()
+    today = arrow.now().format("YYYY-MM-DD")
 
     while not alpaca.is_market_about_to_close():
         options = complete(scraper.get_options())
@@ -94,7 +106,12 @@ def trade_on_signals():
             if option.premium > MAX_PREM or option.premium < MIN_PREM:
                 continue
 
-            days_to_expiry = 0
+            e = parse_expiry(option.expiration)
+            e = dt.date(*[int(x) for x in e.split("-")])
+            s = dt.date(*[int(x) for x in today.split("-")])
+
+            # expiry too far out
+            days_to_expiry = np.busday_count(s, e)
             if days_to_expiry > MAX_DAYS_EXP:
                 continue
 

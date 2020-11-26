@@ -23,13 +23,9 @@ TARGET_SIZE = 0.1
 LEVERAGE = 2
 SPY_EMA_MOVING = 13
 
-# await async functions
-complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
 
 alpaca = AlpacaClient()
 storage = SQLiteStorage()
-scraper = Scraper()
-complete(scraper.login())
 
 # keep track of options already seen
 options_hashset = []
@@ -69,6 +65,12 @@ def trade_on_signals():
     then wait 30s and repeat. Loop ends when market closes.
     Function gets retriggered everyday.
     """
+    # await async functions
+    complete = lambda f: asyncio.get_event_loop().run_until_complete(f)
+
+    scraper = Scraper()
+    complete(scraper.login())
+
     spy_ema = get_spy_moving_avg()
     today = arrow.now().format("YYYY-MM-DD")
 
@@ -126,14 +128,20 @@ def trade_on_signals():
             alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
 
             with storage as sqlite:
-                sqlite.insert_option(option)
+                sqlite.insert_option(option, qty)
 
+            # time for order to fill
             time.sleep(0.5)
 
         time.sleep(30)
 
     # check for positions that need to be sold
-    alpaca.sell_all_positions()
+    with storage as sqlite:
+        for position in storage.get_expired_positions():
+            symbol, qty = position[3], position[1]
+            print(f"selling {qty} {symbol}")
+            alpaca.api.submit_order(symbol, qty, "sell", "market", "gtc")
+            sqlite.mark_exited(position[0])
 
 
 schedule.every().day.at("09:45").do(trade_on_signals)

@@ -63,15 +63,6 @@ def get_spy_moving_avg(n=SPY_EMA_MOVING):
     return avgs[-1]
 
 
-def parse_expiry(exp: str) -> str:
-    if exp[2] == "/":
-        s = [int(x) for x in exp.split("/")]
-        ds = f"20{s[2]}-{s[0]:02}-{s[1]:02}"
-        return arrow.get(ds).format("YYYY-MM-DD")
-
-    return arrow.get(exp).format("YYYY-MM-DD")
-
-
 def trade_on_signals():
     """
     Fetch options and check for new positions
@@ -108,8 +99,7 @@ def trade_on_signals():
             if option.premium > MAX_PREM or option.premium < MIN_PREM:
                 continue
 
-            e = parse_expiry(option.expiration)
-            e = dt.date(*[int(x) for x in e.split("-")])
+            e = dt.date(*[int(x) for x in option.expiration.split("-")])
             s = dt.date(*[int(x) for x in today.split("-")])
 
             # expiry too far out

@@ -1,5 +1,5 @@
 import sqlite3
-from options_scraper import OptionEntry
+from utils.options_scraper import OptionEntry
 from dataclasses import asdict
 
 
@@ -12,8 +12,9 @@ class SQLiteStorage(object):
             (
                 id          TEXT    PRIMARY KEY     NOT NULL,
                 symbol      TEXT                    NOT NULL,
+                exited      BOOL                    NOT NULL,
                 time        TEXT                            ,
-                expiration  TEXT                    NOT NULL,
+                expiration  DATE                    NOT NULL,
                 strike      REAL                            ,
                 side        TEXT                            ,
                 spot        REAL                    NOT NULL,
@@ -26,7 +27,7 @@ class SQLiteStorage(object):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_value, tb):
         self.con.commit()
         self.con.close()
 
@@ -41,6 +42,10 @@ class SQLiteStorage(object):
             """
         )
 
-    def query_options(self, query):
-        cursor = conn.execute(query)
+    def get_expired_positions(self):
+        query = f"""
+            SELECT * FROM option_trades
+            WHERE exited = false AND expiration <= DATE('now');
+            """
+        cursor = self.con.execute(query)
         return [row for row in cursor]

@@ -1,5 +1,6 @@
 import os
 import asyncio
+import arrow
 from pyppeteer import launch
 from dataclasses import dataclass
 
@@ -63,13 +64,21 @@ class Scraper(object):
             value = float(premium[1:-1])
             return value * 1e6 if premium[-1] == "M" else value * 1e3
 
+        def parse_expiry(exp: str) -> str:
+            if exp[2] == "/":
+                s = [int(x) for x in exp.split("/")]
+                ds = f"20{s[2]}-{s[0]:02}-{s[1]:02}"
+                return arrow.get(ds).format("YYYY-MM-DD")
+
+            return arrow.get(exp).format("YYYY-MM-DD")
+
         options = []
         for entry in zip(*data):
             options.append(
                 OptionEntry(
                     symbol=entry[0],
                     time=entry[2],
-                    expiration=entry[3],
+                    expiration=parse_expiry(entry[3]),
                     strike=float(entry[1]),
                     side=entry[4],
                     spot=float(entry[8]),

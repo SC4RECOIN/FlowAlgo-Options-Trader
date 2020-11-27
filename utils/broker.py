@@ -84,11 +84,16 @@ class AlpacaClient(object):
         return self.api.get_clock().is_open
 
     def is_market_about_to_close(self, thesh_mins=10):
-        clock = self.api.get_clock()
-        close = clock.next_close.replace(tzinfo=datetime.timezone.utc).timestamp()
+        try:
+            clock = self.api.get_clock()
+            close = clock.next_close.replace(tzinfo=datetime.timezone.utc).timestamp()
 
-        utc = datetime.timezone.utc
-        curr_time = clock.timestamp.replace(tzinfo=utc).timestamp()
-        time_to_close = (close - curr_time) // 60
+            utc = datetime.timezone.utc
+            curr_time = clock.timestamp.replace(tzinfo=utc).timestamp()
+            time_to_close = (close - curr_time) // 60
+        except:
+            # try one more time
+            time.sleep(10)
+            return self.is_market_about_to_close()
 
         return time_to_close < thesh_mins

@@ -20,7 +20,6 @@ MIN_PREM = 20000
 MAX_PREM = 1000000
 MAX_DAYS_EXP = 7
 TARGET_SIZE = 0.1
-LEVERAGE = 2
 SPY_EMA_MOVING = 13
 
 
@@ -109,6 +108,9 @@ def trade_on_signals():
             if days_to_expiry > MAX_DAYS_EXP:
                 continue
 
+            if arrow.get(option.time, "HH:mm A") < arrow.get("09:45 AM", "HH:mm A"):
+                continue
+
             # SPY is under the EMA
             if alpaca.get_price("SPY") < spy_ema:
                 continue
@@ -119,7 +121,9 @@ def trade_on_signals():
             qty = max(1, int(TARGET_SIZE * equity / option.spot))
             pos_value = qty * option.spot
 
-            if pos_value > float(act.cash) * LEVERAGE:
+            if pos_value > min(
+                float(act.buying_power), float(act.daytrading_buying_power)
+            ):
                 print(f"cannot afford {qty} {option.symbol}")
                 continue
 
@@ -144,7 +148,7 @@ def trade_on_signals():
             sqlite.mark_exited(position[0])
 
 
-schedule.every().day.at("09:45").do(trade_on_signals)
+schedule.every().day.at("9:45").do(trade_on_signals)
 while True:
     schedule.run_pending()
     time.sleep(60)

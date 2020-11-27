@@ -71,14 +71,18 @@ class AlpacaClient(object):
                 )
 
     def sell_all_positions(self):
-        positions = self.api.list_positions()
-        for position in positions:
-            side = "sell" if position.side == "long" else "buy"
-            qty = abs(float(position.qty))
-            self.api.submit_order(position.symbol, qty, side, "market", "day")
+        try:
+            positions = self.api.list_positions()
+            for position in positions:
+                side = "sell" if position.side == "long" else "buy"
+                qty = abs(float(position.qty))
+                self.api.submit_order(position.symbol, qty, side, "market", "day")
 
-        # wait for orders to fill
-        time.sleep(5)
+            # wait for orders to fill
+            time.sleep(5)
+        except:
+            time.sleep(10)
+            self.sell_all_positions()
 
     def is_market_open(self):
         return self.api.get_clock().is_open

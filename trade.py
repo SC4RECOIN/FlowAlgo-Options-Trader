@@ -140,6 +140,7 @@ def trade_on_signals():
         time.sleep(30)
 
     # check for positions that need to be sold
+    print("checking for positions to be sold")
     with storage as sqlite:
         for position in storage.get_expired_positions():
             symbol, qty = position[3], position[1]
@@ -148,7 +149,7 @@ def trade_on_signals():
             sqlite.mark_exited(position[0])
 
 
-schedule.every().day.at("9:45").do(trade_on_signals)
+schedule.every().day.at("09:45").do(trade_on_signals)
 while True:
     schedule.run_pending()
     time.sleep(60)

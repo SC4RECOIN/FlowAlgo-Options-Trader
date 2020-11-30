@@ -1,5 +1,6 @@
 import sqlite3
 from utils.options_scraper import OptionEntry
+import arrow
 from dataclasses import asdict
 
 
@@ -11,6 +12,7 @@ class SQLiteStorage(object):
             CREATE TABLE IF NOT EXISTS option_trades
             (
                 id          TEXT    PRIMARY KEY     NOT NULL,
+                date        DATE                            ,
                 qty         INT                     NOT NULL,
                 exited      BOOL                    NOT NULL,
                 symbol      TEXT                    NOT NULL,
@@ -36,11 +38,12 @@ class SQLiteStorage(object):
     def insert_option(self, option: OptionEntry, qty: int):
         option = asdict(option)
         h = hash(frozenset(option.items()))
+        date = arrow.now().isoformat()
 
         self.con.execute(
             f"""
-            INSERT INTO option_trades (id,qty,exited,{','.join(option.keys())})
-            VALUES ("{h}",{qty},false,"{'","'.join([str(x) for x in option.values()])}")
+            INSERT INTO option_trades (id,date,qty,exited,{','.join(option.keys())})
+            VALUES ("{h}",{date},{qty},false,"{'","'.join([str(x) for x in option.values()])}")
             """
         )
 

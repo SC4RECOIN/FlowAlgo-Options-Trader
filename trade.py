@@ -129,10 +129,14 @@ def trade_on_signals():
 
             # enter position
             print(f"submiting buy order for {qty} {option.symbol}")
-            alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
 
-            with storage as sqlite:
-                sqlite.insert_option(option, qty)
+            try:
+                alpaca.api.submit_order(option.symbol, qty, "buy", "market", "day")
+
+                with storage as sqlite:
+                    sqlite.insert_option(option, qty)
+            except Exception as e:
+                print(f"Error: {e}\noption: {option}")
 
             # time for order to fill
             time.sleep(0.5)

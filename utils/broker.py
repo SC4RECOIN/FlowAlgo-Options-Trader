@@ -26,6 +26,12 @@ class AlpacaClient(object):
     def get_price(self, symbol: str) -> float:
         return self.api.get_last_quote(symbol).bidprice
 
+    def get_bp(self):
+        self.account = self.api.get_account()
+        return min(
+            float(self.account.buying_power), float(self.account.buying_power)
+        ) * (self.leverage / int(self.account.multiplier))
+
     def rebalance(self, symbols: List[str]) -> None:
         self.api.cancel_all_orders()
 
@@ -39,13 +45,7 @@ class AlpacaClient(object):
         print("Closing all positions and rebalancing")
         self.sell_all_positions()
 
-        # get updated BP (cap to leverage)
-        self.account = self.api.get_account()
-        buying_power = min(
-            float(self.account.buying_power), float(self.account.buying_power)
-        ) * (self.leverage / int(self.account.multiplier))
-
-        target_notional = buying_power / len(symbols)
+        target_notional = self.get_bp() / len(symbols)
 
         # enter all positions
         for symbol in symbols:

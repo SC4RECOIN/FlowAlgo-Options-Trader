@@ -122,9 +122,7 @@ def trade_on_signals():
             qty = max(1, int(TARGET_SIZE * equity / option.spot))
             pos_value = qty * option.spot
 
-            if pos_value > min(
-                float(act.buying_power), float(act.daytrading_buying_power)
-            ):
+            if pos_value > alpaca.get_bp():
                 print(f"cannot afford {qty} {option.symbol}")
                 continue
 

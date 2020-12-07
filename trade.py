@@ -24,6 +24,7 @@ SPY_EMA_MOVING = 13
 
 
 alpaca = AlpacaClient()
+print(alpaca.account)
 storage = SQLiteStorage()
 
 # keep track of options already seen

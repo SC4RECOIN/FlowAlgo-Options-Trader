@@ -72,20 +72,31 @@ class Scraper(object):
 
             return arrow.get(exp).format("YYYY-MM-DD")
 
+        def is_today(time):
+            """
+            Options with time > now were from yesterday
+            """
+            now = arrow.now()
+            option_time = arrow.get(
+                f"{now.format('YYYY-MM-DD')} {time}", "YYYY-MM-DD HH:mm A"
+            )
+            return now > option_time
+
         options = []
         for entry in zip(*data):
-            options.append(
-                OptionEntry(
-                    symbol=entry[0],
-                    time=entry[2],
-                    expiration=parse_expiry(entry[3]),
-                    strike=float(entry[1]),
-                    side=entry[4],
-                    spot=float(entry[8]),
-                    order_type=entry[6],
-                    premium=parse_premium(entry[7]),
+            if is_today(entry[2]):
+                options.append(
+                    OptionEntry(
+                        symbol=entry[0],
+                        time=entry[2],
+                        expiration=parse_expiry(entry[3]),
+                        strike=float(entry[1]),
+                        side=entry[4],
+                        spot=float(entry[8]),
+                        order_type=entry[6],
+                        premium=parse_premium(entry[7]),
+                    )
                 )
-            )
 
         return options
 

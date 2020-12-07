@@ -36,16 +36,18 @@ class SQLiteStorage(object):
         self.con.close()
 
     def insert_option(self, option: OptionEntry, qty: int):
-        option = asdict(option)
-        h = hash(frozenset(option.items()))
-        date = arrow.now().isoformat()
+        try:
+            option = asdict(option)
+            h = hash(frozenset(option.items()))
+            date = arrow.now().isoformat()
 
-        self.con.execute(
-            f"""
-            INSERT INTO option_trades (id,date,qty,exited,{','.join(option.keys())})
-            VALUES ("{h}",{date},{qty},false,"{'","'.join([str(x) for x in option.values()])}")
-            """
-        )
+            q = f"""
+                INSERT INTO option_trades (id,date,qty,exited,{','.join(option.keys())})
+                VALUES ("{h}","{date}",{qty},false,"{'","'.join([str(x) for x in option.values()])}")
+                """
+            self.con.execute(q)
+        except Exception as e:
+            print(f"Error inserting to db: {e}\n{q}")
 
     def get_expired_positions(self):
         query = f"""

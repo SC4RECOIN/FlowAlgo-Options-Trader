@@ -84,19 +84,22 @@ class Scraper(object):
 
         options = []
         for entry in zip(*data):
-            if is_today(entry[2]):
-                options.append(
-                    OptionEntry(
-                        symbol=entry[0],
-                        time=entry[2],
-                        expiration=parse_expiry(entry[3]),
-                        strike=float(entry[1]),
-                        side=entry[4],
-                        spot=float(entry[8]),
-                        order_type=entry[6],
-                        premium=parse_premium(entry[7]),
+            try:
+                if is_today(entry[2]):
+                    options.append(
+                        OptionEntry(
+                            symbol=entry[0],
+                            time=entry[2],
+                            expiration=parse_expiry(entry[3]),
+                            strike=float(entry[1]),
+                            side=entry[4],
+                            spot=float(entry[8]),
+                            order_type=entry[6],
+                            premium=parse_premium(entry[7]),
+                        )
                     )
-                )
+            except Exception as e:
+                print(f"failed to parse option: {e}")
 
         return options
 

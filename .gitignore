@@ -7,3 +7,4 @@ hist_data
 cache
 __pycache__
 !results.png
+*.db

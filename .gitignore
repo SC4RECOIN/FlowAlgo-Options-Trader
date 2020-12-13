@@ -8,3 +8,5 @@ cache
 __pycache__
 !results.png
 *.db
+*.npy
+*.gz

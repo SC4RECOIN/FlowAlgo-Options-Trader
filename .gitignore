@@ -10,3 +10,4 @@ __pycache__
 *.db
 *.npy
 *.gz
+*.json

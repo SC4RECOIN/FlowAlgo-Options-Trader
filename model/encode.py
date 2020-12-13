@@ -1,4 +1,5 @@
 import pandas as pd
+import pandas_ta as ta
 import arrow
 import numpy as np
 import datetime as dt
@@ -7,48 +8,71 @@ import requests
 import os
 from tqdm import tqdm
 import joblib
+import json
 from sklearn.preprocessing import MinMaxScaler
 
 key = os.environ["POLYGON_KEY"]
 url = "https://api.polygon.io/v2/aggs/ticker"
-params = f"?unadjusted=false&sort=asc&limit=5000&apiKey={key}"
+params = f"?unadjusted=true&sort=asc&limit=5000&apiKey={key}"
 
 df = pd.read_pickle("../cache/hist_options.pkl")
 print(df.head())
+
+
+# prefetch aggregates from ploygon
+def prefetch_agg(tickers):
+    if os.path.exists("quotes.json"):
+        with open("quotes.json") as f:
+            return json.load(f)
+
+    quotes = {}
+    for ticker in tqdm(tickers, total=len(tickers), desc="Fetching quotes"):
+        quotes[ticker] = {}
+
+        try:
+            r = requests.get(
+                f"{url}/{ticker}/range/1/day/2017-04-01/2020-12-01{params}"
+            )
+            if r.status_code != 200:
+                raise Exception(f"failed to fetch quotes for {ticker}")
+
+            for quote in r.json()["results"]:
+                day = arrow.get(quote["t"]).format("YYYY-MM-DD")
+                quotes[ticker][day] = quote
+
+        except Exception as e:
+            print(e)
+
+    with open("quotes.json", "w") as f:
+        json.dump(quotes, f, indent=4)
+
+    return quotes
+
+
+tickers = list(set(df["Ticker"]))
+quotes = prefetch_agg(tickers)
+bad_tickers = []
+
+# calc TA
+for ticker in tickers:
+    try:
+        quotes_df = pd.DataFrame(quotes[ticker]).transpose()
+        quotes_df["rsi10"] = ta.rsi(quotes_df["c"], length=10)
+        quotes[ticker] = quotes_df.to_dict(orient="index")
+    except:
+        bad_tickers.append(ticker)
+
 day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
 counter = Counter()
 
-
-def get_prices(date):
-    next_day = date.shift(days=1).format("YYYY-MM-DD")
-    day = date.format("YYYY-MM-DD")
-
-    # aggregate from polygon
-    r = requests.get(f"{url}/{row['Ticker']}/range/1/minute/{day}/{next_day}{params}")
-    if r.status_code != 200:
-        raise Exception(f"failed to fetch quotes for {row['Ticker']}")
-
-    # find price at bod and current
-    start_of_day = arrow.get(f"{day}T09:30:00-05:00")
-    s_price, now_price = None, None
-    for quote in r.json()["results"]:
-        if s_price is None and arrow.get(quote["t"]) > start_of_day:
-            s_price = quote["c"]
-
-        if now_price is None and arrow.get(quote["t"]) > row["Time"]:
-            now_price = quote["c"]
-
-    if s_price is None or now_price is None:
-        raise Exception(f'price cannot be `None` for {row["Ticker"]} on {row["Time"]}')
-
-    return s_price, now_price
-
-
-data = []
+data, dates, tickers = [], [], []
 for idx, row in tqdm(df.iterrows(), total=len(df)):
     # new day - reset counter
     if arrow.get(row["Time"].format("YYYY-MM-DD")) > day:
         counter = Counter()
+
+    if row["Ticker"] in bad_tickers:
+        continue
 
     try:
         entry = []
@@ -70,18 +94,42 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
         # seconds to expiry
         entry.append((row["Expiry"] - row["Time"]).seconds)
 
-        # how much that stock has moved that day
-        s_price, now_price = get_prices(row["Time"])
-
-        # encode C/P, how far OTM, and how far price moved that day
+        # encode C/P, how far OTM
         if row["C/P"] == "Call":
             entry.append(row["Strike"] / row["Spot"] - 1)
             entry.append(0)
-            entry.append(now_price / s_price - 1)
+
+            # how far the stock went up that day
+            d = row["Time"].format("YYYY-MM-DD")
+            chg = row["Spot"] / quotes[row["Ticker"]][d]["o"] - 1
+
+            if abs(chg) > 0.3:
+                raise Exception(
+                    f"Irregular price movement for {row['Ticker']} on {d} ({chg})"
+                )
+            entry.append(chg)
         else:
             entry.append(row["Spot"] / row["Strike"] - 1)
             entry.append(1)
-            entry.append(s_price / now_price - 1)
+
+            # how far the stock went down that day
+            d = row["Time"].format("YYYY-MM-DD")
+            chg = quotes[row["Ticker"]][d]["o"] / row["Spot"] - 1
+
+            if abs(chg) > 0.3:
+                raise Exception(
+                    f"Irregular price movement for {row['Ticker']} on {d} ({chg})"
+                )
+            entry.append(chg)
+
+        yesterday = row["Time"].shift(days=-1)
+
+        # Sunday
+        if yesterday.weekday() == 6:
+            yesterday = yesterday.shift(days=-2)
+
+        rsi = quotes[row["Ticker"]][yesterday.format("YYYY-MM-DD")]["rsi10"]
+        entry.append(rsi)
 
         # order type
         if row["Type"] == "SWEEP":
@@ -101,11 +149,14 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
         entry.append(row["Qty"] / max(1, row["OI"]))
 
         data.append(entry)
+        dates.append(row["Time"].timestamp)
+        tickers.append(row["Ticker"])
+
     except Exception as e:
         print(e)
 
-    if idx % 100 == 0:
-        np.save("temp.npy", np.array(data))
+with open("data.json", "w") as f:
+    json.dump({"tickers": tickers, "dates": dates}, f, indent=4)
 
 # scale
 data = np.array(data)
@@ -115,3 +166,6 @@ joblib.dump(scaler, "scaler.gz")
 
 np.save("data.npy", data)
 print(data.shape)
+
+assert len(data) == len(dates)
+assert len(data) == len(tickers)

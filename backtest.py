@@ -56,7 +56,7 @@ def clean_df(df, use_cache=True):
                 s = [int(x) for x in row.Date.split("/")]
                 date = f"20{s[2]}-{s[0]:02}-{s[1]:02}"
                 date = arrow.get(date)
-                date = f"{date.format('YYYY-MM-DD')}T{row.Time}"
+                date = f"{date.format('YYYY-MM-DD')}T{row.Time}-05:00"
                 date = arrow.get(date)
 
             # only month provided

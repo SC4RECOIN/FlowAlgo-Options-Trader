@@ -54,14 +54,16 @@ quotes = prefetch_agg(tickers)
 bad_tickers = []
 
 # calc TA
-for ticker in tickers:
+for ticker in tqdm(tickers, total=len(tickers), desc="Calculating TA"):
     try:
         quotes_df = pd.DataFrame(quotes[ticker]).transpose()
         quotes_df["rsi10"] = ta.rsi(quotes_df["c"], length=10)
+        quotes_df["volumeEMA"] = ta.ema(quotes_df["v"], length=10)
         quotes[ticker] = quotes_df.to_dict(orient="index")
     except:
         bad_tickers.append(ticker)
 
+# keep track of counts and reset each day
 day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
 counter = Counter()
 
@@ -122,14 +124,19 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
                 )
             entry.append(chg)
 
+        # stats from yesterday
         yesterday = row["Time"].shift(days=-1)
 
         # Sunday
         if yesterday.weekday() == 6:
             yesterday = yesterday.shift(days=-2)
 
-        rsi = quotes[row["Ticker"]][yesterday.format("YYYY-MM-DD")]["rsi10"]
+        yest = yesterday.format("YYYY-MM-DD")
+        rsi = quotes[row["Ticker"]][yest]["rsi10"]
+        v_ema = quotes[row["Ticker"]][yest]["volumeEMA"]
+        volume = quotes[row["Ticker"]][yest]["v"]
         entry.append(rsi)
+        entry.append(volume / v_ema - 1)
 
         # order type
         if row["Type"] == "SWEEP":

@@ -50,60 +50,59 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
     if arrow.get(row["Time"].format("YYYY-MM-DD")) > day:
         counter = Counter()
 
-    entry = []
-
-    # keep track of ticker c/p and overall c/p ratio
-    counter[f"{row['C/P']}{row['Ticker']}"] += 1
-    counter[row["C/P"]] += 1
-
-    # occurence of calls and puts and c/p ratio
-    entry.append(counter[f"Call{row['Ticker']}"])
-    entry.append(counter[f"Put{row['Ticker']}"])
-    entry.append(counter["Call"] / max(counter["Put"], 1))
-
-    # seconds since start of day
-    bod = arrow.get(row["Time"].format("YYYY-MM-DD"))
-    diff = (row["Time"] - bod).seconds
-    entry.append(diff)
-
-    # seconds to expiry
-    entry.append((row["Expiry"] - row["Time"]).seconds)
-
-    # how much that stock has moved that day
     try:
+        entry = []
+
+        # keep track of ticker c/p and overall c/p ratio
+        counter[f"{row['C/P']}{row['Ticker']}"] += 1
+        counter[row["C/P"]] += 1
+
+        # occurence of calls and puts and c/p ratio
+        entry.append(counter[f"Call{row['Ticker']}"])
+        entry.append(counter[f"Put{row['Ticker']}"])
+        entry.append(counter["Call"] / max(counter["Put"], 1))
+
+        # seconds since start of day
+        bod = arrow.get(row["Time"].format("YYYY-MM-DD"))
+        diff = (row["Time"] - bod).seconds
+        entry.append(diff)
+
+        # seconds to expiry
+        entry.append((row["Expiry"] - row["Time"]).seconds)
+
+        # how much that stock has moved that day
         s_price, now_price = get_prices(row["Time"])
+
+        # encode C/P, how far OTM, and how far price moved that day
+        if row["C/P"] == "Call":
+            entry.append(row["Strike"] / row["Spot"] - 1)
+            entry.append(0)
+            entry.append(now_price / s_price - 1)
+        else:
+            entry.append(row["Spot"] / row["Strike"] - 1)
+            entry.append(1)
+            entry.append(s_price / now_price - 1)
+
+        # order type
+        if row["Type"] == "SWEEP":
+            entry.append(0)
+        elif row["Type"] == "BLOCK":
+            entry.append(1)
+        else:
+            entry.append(2)
+
+        entry.append(int(row["Unusual"]))
+        entry.append(row["Premium"])
+
+        # very active if daily volume exceeds OI
+        entry.append(row["Volume"] / max(1, row["OI"]))
+
+        # size relative to OI
+        entry.append(row["Qty"] / max(1, row["OI"]))
+
+        data.append(entry)
     except Exception as e:
         print(e)
-        continue
-
-    # encode C/P, how far OTM, and how far price moved that day
-    if row["C/P"] == "Call":
-        entry.append(row["Strike"] / row["Spot"] - 1)
-        entry.append(0)
-        entry.append(now_price / s_price - 1)
-    else:
-        entry.append(row["Spot"] / row["Strike"] - 1)
-        entry.append(1)
-        entry.append(s_price / now_price - 1)
-
-    # order type
-    if row["Type"] == "SWEEP":
-        entry.append(0)
-    elif row["Type"] == "BLOCK":
-        entry.append(1)
-    else:
-        entry.append(2)
-
-    entry.append(int(row["Unusual"]))
-    entry.append(row["Premium"])
-
-    # very active if daily volume exceeds OI
-    entry.append(row["Volume"] / max(1, row["OI"]))
-
-    # size relative to OI
-    entry.append(row["Qty"] / max(1, row["OI"]))
-
-    data.append(entry)
 
     if idx % 100 == 0:
         np.save("temp.npy", np.array(data))

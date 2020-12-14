@@ -138,14 +138,6 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
         entry.append(rsi)
         entry.append(volume / v_ema - 1)
 
-        # order type
-        if row["Type"] == "SWEEP":
-            entry.append(0)
-        elif row["Type"] == "BLOCK":
-            entry.append(1)
-        else:
-            entry.append(2)
-
         entry.append(int(row["Unusual"]))
         entry.append(row["Premium"])
 

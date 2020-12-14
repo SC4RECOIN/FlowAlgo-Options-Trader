@@ -10,14 +10,37 @@ import signal
 
 class Quotes(object):
     def __init__(self):
-        if not os.path.exists("price_cache/cache.json"):
+        if not os.path.exists("price_cache/cache.pkl"):
             raise ValueError("Missing price cache")
 
         with open("price_cache/cache.pkl", "rb") as f:
             self.cache = pickle.load(f)
 
+        self.key = os.environ["POLYGON_KEY"]
+
     def get_quote(self, symbol, timestamp):
-        return self.cache[f"{symbol}{timestamp}"]
+        try:
+            return self.cache[f"{symbol}{timestamp}"]
+        except KeyError:
+            start = arrow.get(timestamp)
+            end = start.shift(days=1)
+            timestamp *= 1000
+
+            with RESTClient(self.key) as client:
+                resp = client.stocks_equities_aggregates(
+                    symbol,
+                    1,
+                    "minute",
+                    start.format("YYYY-MM-DD"),
+                    end.format("YYYY-MM-DD"),
+                    unadjusted=False,
+                )
+
+                for result in resp.results:
+                    if result["t"] > timestamp:
+                        return result["c"]
+
+        raise Exception(f"No price found for {symbol}")
 
     def __getitem__(self, key):
         return self.cache[key]
@@ -32,10 +55,10 @@ class QuotesFetcher(object):
         self.key = os.environ["POLYGON_KEY"]
 
     def _save_cache(self):
-        if not os.path.exists("price_cache"):
-            os.mkdir("price_cache")
+        if not os.path.exists("../price_cache"):
+            os.mkdir("../price_cache")
 
-        with open("price_cache/cache.pkl", "wb") as f:
+        with open("../price_cache/cache.pkl", "wb") as f:
             pickle.dump(self.cache, f)
 
     @staticmethod

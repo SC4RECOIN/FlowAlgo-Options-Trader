@@ -8,6 +8,7 @@ from torch.distributions import Categorical
 from collections import deque, namedtuple
 from tqdm import tqdm
 from utils.trader import Trader
+from collections import Counter
 import datetime
 import arrow
 
@@ -16,7 +17,7 @@ signals = ["BULLISH", "NEUTRAL", "BEARISH"]
 
 def main(
     encodings,
-    tickers, 
+    tickers,
     dates,
     num_episodes=50000,
     max_timesteps=500,
@@ -40,6 +41,9 @@ def main(
     save_every=1000,
     load=False,
 ):
+    valid_tickers = Counter(tickers).most_common(200)
+    valid_tickers = [s[0] for s in valid_tickers]
+
     state_dim = encodings.shape[1]
     num_actions = len(signals)
 
@@ -76,8 +80,11 @@ def main(
     for eps in tqdm(range(num_episodes), desc="episodes"):
         trader = Trader()
 
-        for idx in range(len(encodings) - 1):
+        for idx in tqdm(range(len(encodings) - 1), total=len(encodings)):
             time += 1
+
+            if tickers[idx] not in valid_tickers:
+                continue
 
             state = encodings[idx]
             state = torch.from_numpy(state).to(device)
@@ -89,9 +96,7 @@ def main(
             action_log_prob = dist.log_prob(action)
             action = action.item()
 
-            trader.trade_on_signal(
-               tickers, signals[action], dates[idx]
-            )
+            trader.trade_on_signal(tickers[idx], signals[action], dates[idx])
             reward = trader.reward(dates[idx])
 
             next_state = encodings[idx + 1]
@@ -119,8 +124,8 @@ if __name__ == "__main__":
     with open("model/data.json") as f:
         data = json.load(f)
 
-    encoded = np.load("model/data.npy")
-    assert len(encoded) == len(data['tickers'])
-    assert len(encoded) == len(data['dates'])
+    encoded = np.load("model/data.npy").astype(np.float32)
+    assert len(encoded) == len(data["tickers"])
+    assert len(encoded) == len(data["dates"])
 
-    main(encoded, len(data['tickers'], len(data['dates'])
+    main(encoded, data["tickers"], data["dates"])

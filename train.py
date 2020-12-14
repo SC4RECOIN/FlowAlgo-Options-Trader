@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 import os
+import json
 from model.ppg import PPG, Memory, device
 from torch.distributions import Categorical
 from collections import deque, namedtuple
@@ -14,7 +15,9 @@ signals = ["BULLISH", "NEUTRAL", "BEARISH"]
 
 
 def main(
-    df,
+    encodings,
+    tickers, 
+    dates,
     num_episodes=50000,
     max_timesteps=500,
     actor_hidden_dim=32,
@@ -36,9 +39,8 @@ def main(
     render_every_eps=250,
     save_every=1000,
     load=False,
-    monitor=False,
 ):
-    state_dim = len(df["encoding"].iloc[0])
+    state_dim = encodings.shape[1]
     num_actions = len(signals)
 
     memories = deque([])
@@ -74,10 +76,10 @@ def main(
     for eps in tqdm(range(num_episodes), desc="episodes"):
         trader = Trader()
 
-        for idx in range(len(df) - 1):
+        for idx in range(len(encodings) - 1):
             time += 1
 
-            state = np.array(df["encoding"].iloc[idx]).astype(np.float32)
+            state = encodings[idx]
             state = torch.from_numpy(state).to(device)
             action_probs, _ = agent.actor(state)
             value = agent.critic(state)
@@ -88,11 +90,11 @@ def main(
             action = action.item()
 
             trader.trade_on_signal(
-                df["symbol"].iloc[idx], signals[action], df["datetime"].iloc[idx]
+               tickers, signals[action], dates[idx]
             )
-            reward = trader.reward(df["datetime"].iloc[idx])
+            reward = trader.reward(dates[idx])
 
-            next_state = np.array(df["encoding"].iloc[idx + 1]).astype(np.float32)
+            next_state = encodings[idx + 1]
             memory = Memory(state, action, action_log_prob, reward, False, value)
             memories.append(memory)
 
@@ -114,11 +116,11 @@ def main(
 
 
 if __name__ == "__main__":
-    df = pd.read_pickle("cache/hist_options.pkl")
+    with open("model/data.json") as f:
+        data = json.load(f)
+
     encoded = np.load("model/data.npy")
+    assert len(encoded) == len(data['tickers'])
+    assert len(encoded) == len(data['dates'])
 
-    # info for buying the underlying equity
-    underlying = [*zip(df["Time"], df["Ticker"])]
-
-    print(encoded.shape)
-    # main(df)
+    main(encoded, len(data['tickers'], len(data['dates'])

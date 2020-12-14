@@ -5,6 +5,7 @@ import arrow
 import os
 from collections import Counter
 import json
+import signal
 
 
 class Quotes(object):
@@ -51,16 +52,19 @@ class QuotesFetcher(object):
 
             while cursor < to:
                 start, end = cursor.format("YYYY-MM-DD"), to.format("YYYY-MM-DD")
-                resp = client.stocks_equities_aggregates(
-                    symbol, 1, "minute", start, end, unadjusted=False
-                )
+                try:
+                    resp = client.stocks_equities_aggregates(
+                        symbol, 1, "minute", start, end, unadjusted=False
+                    )
 
-                for result in resp.results:
-                    closes[result["t"]] = result["c"]
+                    for result in resp.results:
+                        closes[result["t"]] = result["c"]
 
-                t = self.ts_to_datetime(result["t"])
-                print(f"\rfetching {symbol}: {t}", end="")
-                cursor = arrow.get(result["t"])
+                    t = self.ts_to_datetime(result["t"])
+                    print(f"\rfetching {symbol}: {t}", end="")
+                    cursor = arrow.get(result["t"])
+                except:
+                    return closes
 
         print()
         return closes
@@ -86,6 +90,7 @@ if __name__ == "__main__":
 
         try:
             closes = quotes._prefetch_tickers(symbol)
+
             for time, _t in tqdm(zip(times, unform_times), total=len(times)):
                 if time in closes:
                     quotes.cache[f"{symbol}{_t}"] = closes[time]

@@ -3,6 +3,7 @@ from datetime import datetime
 import pickle
 import arrow
 import os
+from collections import Counter
 import json
 
 
@@ -41,11 +42,11 @@ class QuotesFetcher(object):
         return datetime.fromtimestamp(ts / 1000.0).strftime("%Y-%m-%d %H:%M")
 
     def _prefetch_tickers(self, symbol):
-        closes = []
+        closes = {}
 
         print()
         with RESTClient(self.key) as client:
-            cursor = arrow.get("2019-01-01")
+            cursor = arrow.get("2017-04-01")
             to = arrow.get("2020-12-01")
 
             while cursor < to:
@@ -55,41 +56,41 @@ class QuotesFetcher(object):
                 )
 
                 for result in resp.results:
-                    closes.append((result["t"], result["c"]))
+                    closes[result["t"]] = result["c"]
 
-                print(
-                    f"\rfetching {symbol}: {self.ts_to_datetime(result['t'])}", end=""
-                )
+                t = self.ts_to_datetime(result["t"])
+                print(f"\rfetching {symbol}: {t}", end="")
                 cursor = arrow.get(result["t"])
 
         print()
-        return sorted(closes)
+        return closes
 
 
 if __name__ == "__main__":
-    import pandas as pd
     from tqdm import tqdm
-    import numpy as np
 
     quotes = QuotesFetcher()
+    with open("../model/data.json") as f:
+        data = json.load(f)
 
-    # load all news
-    data_dir = "../pickle_news"
-    df = pd.concat(
-        [pd.read_pickle(f"{data_dir}/{filename}") for filename in os.listdir(data_dir)]
-    )
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    # only take 200 most frequent stocks
+    symbols = Counter(data["tickers"]).most_common(200)
+    symbols = [s[0] for s in symbols]
 
-    symbols = set(df["symbol"])
+    # round times to nearest minute for lookup (convert back to ms)
+    times = [(int(t / 60) + 1) * 60000 for t in set(data["dates"])]
+    unform_times = set(data["dates"])
+
+    # fetch minute data for each symbol
     for symbol in tqdm(symbols, total=len(symbols)):
-        times = df[df["symbol"] == symbol]["timestamp"].astype(int) / 10 ** 6
 
-        closes = quotes._prefetch_tickers(symbol)
-        for time in tqdm(times, total=len(times)):
-            for close in closes:
+        try:
+            closes = quotes._prefetch_tickers(symbol)
+            for time, _t in tqdm(zip(times, unform_times), total=len(times)):
+                if time in closes:
+                    quotes.cache[f"{symbol}{_t}"] = closes[time]
 
-                if close[0] > time:
-                    quotes.cache[f"{symbol}{time}"] = close[1]
-                    break
+        except Exception as e:
+            print(f"failed for {symbol}: {e}")
 
     quotes._save_cache()

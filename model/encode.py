@@ -154,16 +154,16 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
     except Exception as e:
         print(e)
 
-with open("data.json", "w") as f:
+with open("../cache/data.json", "w") as f:
     json.dump({"tickers": tickers, "dates": dates}, f, indent=4)
 
 # scale
 data = np.array(data)
 scaler = MinMaxScaler()
 data = scaler.fit_transform(data)
-joblib.dump(scaler, "scaler.gz")
+joblib.dump(scaler, "../cache/scaler.gz")
 
-np.save("data.npy", data)
+np.save("../cache/data.npy", data)
 print(data.shape)
 
 assert len(data) == len(dates)

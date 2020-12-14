@@ -7,66 +7,53 @@ class Trader(object):
         self.quotes = Quotes()
         self.starting_balance = starting_balance
         self.balance = starting_balance
-        self.positions = {}
+        self.positions = []
+
+        # get update eod
+        self.last_equity = starting_balance
+        self.current_reward = 0
 
         # arbitrary parameters
-        self.max_hold = max_hold
-        self.trade_fee = 5.00
+        self.target_pos_size = 0.1
 
-    def trade_on_signal(self, symbol: str, signal: str, timestamp: int):
+    def trade_on_signal(self, symbol: str, signal: str, price: float, expiry: str):
         """
         Trades on signal from RL model.
-        Buy if bullish. Sell if in position on Bearish.
+        Buy if bullish. Sell if in position and Bearish.
         Currently does not short on bearish signals.
-        Can only hold `self.max_hold` positions.
         """
-        if (
-            signal == "BULLISH"
-            and len(self.positions.keys()) < self.max_hold
-            and symbol not in self.positions
-        ):
-            self.rebalance(symbol, timestamp)
+        pos = [p["symbol"] for p in self.positions]
+        if signal == "BULLISH" and symbol not in pos:
+            notional = self.last_equity * self.target_pos_size
+            qty = notional // price
+            pos = {
+                "qty": qty,
+                "entry_price": price,
+                "symbol": symbol,
+                "cost": qty * price,
+                "sell_date": expiry,
+            }
+            positions.append(pos)
+            self.balance -= qty * price
 
-        elif signal == "BEARISH" and symbol in self.positions:
-            self.rebalance(symbol, timestamp, True)
+        elif signal == "BEARISH" and symbol in pos:
+            to_sell = [p for p in self.positions if p["symbol"] == symbol][0]
+            self.balance += to_sell["qty"] * price
+            self.positions = [p for p in self.positions if p["symbol"] != symbol]
 
-    def rebalance(self, symbol: str, timestamp: int, remove=False):
-        # trading fee (also deters frequent trades)
-        self.balance -= self.trade_fee
+    def eod(self, day: str):
+        # sell positions marked for that day
+        for pos in self.positions:
+            if pos["sell_date"] == day:
+                close = self.quotes.get_quote(pos["symbol"], day)
+                self.balance += pos["qty"] * close
+                self.positions = [
+                    p for p in self.positions if p["symbol"] != pos["symbol"]
+                ]
 
-        positions = list(self.positions.keys())
-        close = lambda s: self.quotes.get_quote(s, timestamp)
+        self.last_equity = 0
+        for pos in self.positions:
+            close = self.quotes.get_quote(pos["symbol"], day)
+            self.last_equity += pos["qty"] * close
 
-        # sell all positions
-        for symbol, qty in self.positions.items():
-            self.balance += close(symbol) * qty
-
-        if remove:
-            positions = [p for p in positions if p != symbol]
-        else:
-            positions.append(symbol)
-
-        self.positions = {}
-        if len(positions) == 0:
-            return
-
-        # re-enter positions
-        target_val = self.balance / len(positions)
-        for symbol in positions:
-            qty = target_val // close(symbol)
-            self.balance -= qty * close(symbol)
-            self.positions[symbol] = qty
-
-    def reward(self, timestamp: int):
-        """
-        Reward is the current ROI.
-        Calculates current value of positions over intial capital.
-        """
-        positions = self.positions.keys()
-        close = lambda s: self.quotes.get_quote(s, timestamp)
-        value = (
-            sum([close(symbol) * qty for symbol, qty in self.positions.items()])
-            + self.balance
-        )
-
-        return (value / self.starting_balance - 1) * 100
+        self.current_reward = (self.last_equity / self.starting_balance - 1) * 100

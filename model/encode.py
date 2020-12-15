@@ -152,7 +152,7 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
         entry.append(row["Qty"] / max(1, row["OI"]))
 
         # check for NaN
-        if any([not np.isfinite(x) for x in entry]):
+        if any([np.isnan(x) for x in entry]):
             continue
 
         data.append(entry)

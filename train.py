@@ -35,8 +35,6 @@ def main(
     epochs=1,
     epochs_aux=6,
     seed=None,
-    render=False,
-    render_every_eps=250,
     save_every=1000,
     load=False,
 ):

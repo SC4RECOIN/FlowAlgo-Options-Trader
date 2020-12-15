@@ -26,6 +26,7 @@ class Trader(object):
         if signal == "BULLISH" and symbol not in pos:
             notional = self.last_equity * self.target_pos_size
             qty = notional // price
+            value = qty * price
             pos = {
                 "qty": qty,
                 "entry_price": price,
@@ -33,8 +34,9 @@ class Trader(object):
                 "cost": qty * price,
                 "sell_date": expiry,
             }
-            self.positions.append(pos)
-            self.balance -= qty * price
+            if self.balance > value:
+                self.positions.append(pos)
+                self.balance -= value
 
         elif signal == "BEARISH" and symbol in pos:
             to_sell = [p for p in self.positions if p["symbol"] == symbol][0]
@@ -51,7 +53,7 @@ class Trader(object):
                     p for p in self.positions if p["symbol"] != pos["symbol"]
                 ]
 
-        self.last_equity = 0
+        self.last_equity = self.balance
         for pos in self.positions:
             close = self.quotes.get_quote(pos["symbol"], day)
             self.last_equity += pos["qty"] * close

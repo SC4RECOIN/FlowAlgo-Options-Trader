@@ -102,10 +102,12 @@ def main(
             expiry = row["Expiry"].format("YYYY-MM-DD")
             ticker = row["Ticker"]
             trader.trade_on_signal(ticker, signals[action], current_price, expiry)
+
             reward = trader.current_reward
+            done = reward < -75
 
             next_state = encodings[idx + 1]
-            memory = Memory(state, action, action_log_prob, reward, False, value)
+            memory = Memory(state, action, action_log_prob, reward, done, value)
             memories.append(memory)
 
             state = next_state
@@ -118,6 +120,9 @@ def main(
                 if num_policy_updates % num_policy_updates_per_aux == 0:
                     agent.learn_aux(aux_memories)
                     aux_memories.clear()
+
+            if done:
+                break
 
         print(f"reward after episode: {reward:.2f}%")
 

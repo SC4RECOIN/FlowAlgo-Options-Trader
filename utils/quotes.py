@@ -11,13 +11,15 @@ import signal
 class Quotes(object):
     def __init__(self):
         try:
-            with open("cache/prices.pkl", "rb") as f:
+            with open("cache/eod_prices.pkl", "rb") as f:
                 self.cache = pickle.load(f)
         except FileNotFoundError:
             self.cache = {}
             print("missing price cache")
 
         self.key = os.environ["POLYGON_KEY"]
+        self.valid_tickers = list(self.cache.keys())
+        print(f"{len(self.valid_tickers)} valid tickers")
 
     def get_quote(self, symbol: str, date: str) -> float:
         return self.cache[symbol][date]

@@ -21,8 +21,8 @@ print(df.head())
 
 # prefetch aggregates from ploygon
 def prefetch_agg(tickers):
-    if os.path.exists("quotes.json"):
-        with open("quotes.json") as f:
+    if os.path.exists("../cache/quotes.json"):
+        with open("../cache/quotes.json") as f:
             return json.load(f)
 
     quotes = {}
@@ -43,18 +43,20 @@ def prefetch_agg(tickers):
         except Exception as e:
             print(e)
 
-    with open("quotes.json", "w") as f:
+    with open("../cache/quotes.json", "w") as f:
         json.dump(quotes, f, indent=4)
 
     return quotes
 
 
-tickers = list(set(df["Ticker"]))
-quotes = prefetch_agg(tickers)
+# only take most frequent stocks
+symbols = Counter(df["Ticker"]).most_common(400)
+symbols = [s[0] for s in symbols]
+quotes = prefetch_agg(symbols)
 bad_tickers = []
 
 # calc TA
-for ticker in tqdm(tickers, total=len(tickers), desc="Calculating TA"):
+for ticker in tqdm(symbols, total=len(symbols), desc="Calculating TA"):
     try:
         quotes_df = pd.DataFrame(quotes[ticker]).transpose()
         quotes_df["rsi10"] = ta.rsi(quotes_df["c"], length=10)
@@ -67,13 +69,15 @@ for ticker in tqdm(tickers, total=len(tickers), desc="Calculating TA"):
 day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
 counter = Counter()
 
-data, dates, tickers = [], [], []
+data, rows = [], []
 for idx, row in tqdm(df.iterrows(), total=len(df)):
     # new day - reset counter
-    if arrow.get(row["Time"].format("YYYY-MM-DD")) > day:
+    current_day = arrow.get(row["Time"].format("YYYY-MM-DD"))
+    if current_day > day:
         counter = Counter()
+        day = current_day
 
-    if row["Ticker"] in bad_tickers:
+    if row["Ticker"] in bad_tickers or row["Ticker"] not in symbols:
         continue
 
     try:
@@ -147,15 +151,18 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
         # size relative to OI
         entry.append(row["Qty"] / max(1, row["OI"]))
 
+        # check for NaN
+        if any([not np.isfinite(x) for x in entry]):
+            continue
+
         data.append(entry)
-        dates.append(row["Time"].timestamp)
-        tickers.append(row["Ticker"])
+        rows.append(row)
 
     except Exception as e:
         print(e)
 
-with open("../cache/data.json", "w") as f:
-    json.dump({"tickers": tickers, "dates": dates}, f, indent=4)
+new_df = pd.DataFrame(rows)
+new_df.to_pickle("../cache/encoded_rows.pkl")
 
 # scale
 data = np.array(data)
@@ -166,5 +173,4 @@ joblib.dump(scaler, "../cache/scaler.gz")
 np.save("../cache/data.npy", data)
 print(data.shape)
 
-assert len(data) == len(dates)
-assert len(data) == len(tickers)
+assert len(data) == len(rows)

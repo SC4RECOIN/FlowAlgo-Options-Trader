@@ -17,8 +17,7 @@ signals = ["BULLISH", "NEUTRAL", "BEARISH"]
 
 def main(
     encodings,
-    tickers,
-    dates,
+    df,
     num_episodes=50000,
     max_timesteps=500,
     actor_hidden_dim=32,
@@ -41,9 +40,6 @@ def main(
     save_every=1000,
     load=False,
 ):
-    valid_tickers = Counter(tickers).most_common(200)
-    valid_tickers = [s[0] for s in valid_tickers]
-
     state_dim = encodings.shape[1]
     num_actions = len(signals)
 
@@ -76,14 +72,22 @@ def main(
 
     time = 0
     num_policy_updates = 0
+    day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
 
     for eps in tqdm(range(num_episodes), desc="episodes"):
         trader = Trader()
+        valid_tickers = trader.quotes.valid_tickers
 
         for idx in tqdm(range(len(encodings) - 1), total=len(encodings)):
             time += 1
+            row = df.iloc[idx]
 
-            if tickers[idx] not in valid_tickers:
+            current_day = arrow.get(row["Time"].format("YYYY-MM-DD"))
+            if current_day > day:
+                trader.eod(day.format("YYYY-MM-DD"))
+                day = current_day
+
+            if row["Ticker"] not in valid_tickers:
                 continue
 
             state = encodings[idx]
@@ -96,8 +100,11 @@ def main(
             action_log_prob = dist.log_prob(action)
             action = action.item()
 
-            trader.trade_on_signal(tickers[idx], signals[action], dates[idx])
-            reward = trader.reward(dates[idx])
+            current_price = row["Spot"]
+            expiry = row["Expiry"].format("YYYY-MM-DD")
+            ticker = row["Ticker"]
+            trader.trade_on_signal(ticker, signals[action], current_price, expiry)
+            reward = trader.current_reward
 
             next_state = encodings[idx + 1]
             memory = Memory(state, action, action_log_prob, reward, False, value)
@@ -121,11 +128,10 @@ def main(
 
 
 if __name__ == "__main__":
-    with open("model/data.json") as f:
-        data = json.load(f)
+    df = pd.read_pickle("cache/encoded_rows.pkl")
+    print(df.head())
 
-    encoded = np.load("model/data.npy").astype(np.float32)
-    assert len(encoded) == len(data["tickers"])
-    assert len(encoded) == len(data["dates"])
+    encoded = np.load("cache/data.npy").astype(np.float32)
+    assert len(encoded) == len(df)
 
-    main(encoded, data["tickers"], data["dates"])
+    main(encoded, df)

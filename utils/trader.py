@@ -33,7 +33,7 @@ class Trader(object):
                 "cost": qty * price,
                 "sell_date": expiry,
             }
-            positions.append(pos)
+            self.positions.append(pos)
             self.balance -= qty * price
 
         elif signal == "BEARISH" and symbol in pos:

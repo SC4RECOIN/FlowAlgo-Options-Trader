@@ -47,15 +47,23 @@ class Trader(object):
         # sell positions marked for that day
         for pos in self.positions:
             if pos["sell_date"] == day:
-                close = self.quotes.get_quote(pos["symbol"], day)
-                self.balance += pos["qty"] * close
+                try:
+                    close = self.quotes.get_quote(pos["symbol"], day)
+                    self.balance += pos["qty"] * close
+                except KeyError:
+                    # flat on error
+                    self.balance += pos["cost"]
+
                 self.positions = [
                     p for p in self.positions if p["symbol"] != pos["symbol"]
                 ]
 
         self.last_equity = self.balance
         for pos in self.positions:
-            close = self.quotes.get_quote(pos["symbol"], day)
-            self.last_equity += pos["qty"] * close
+            try:
+                close = self.quotes.get_quote(pos["symbol"], day)
+                self.last_equity += pos["qty"] * close
+            except KeyError:
+                self.last_equity += pos["cost"]
 
         self.current_reward = (self.last_equity / self.starting_balance - 1) * 100

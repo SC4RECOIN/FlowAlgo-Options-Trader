@@ -62,3 +62,10 @@ APCA_API_SECRET_KEY=secret
 ```
 
 FlowAlgo credentials are required for scraping option flow and the Alpaca credentials are required for backtesting
+
+## Clustering
+
+| Clustering method | return   |
+| ----------------- | -------- |
+| Kmeans (n=30)     | 190.294% |
+| MeanSfhit         |

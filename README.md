@@ -65,7 +65,13 @@ FlowAlgo credentials are required for scraping option flow and the Alpaca creden
 
 ## Clustering
 
-| Clustering method | return   |
-| ----------------- | -------- |
-| Kmeans (n=30)     | 190.294% |
-| MeanSfhit         |
+| Clustering method | return (train) | return (test) |
+| ----------------- | -------------- | ------------- |
+| Buy and Hold SPY  | 19.43%         | 21.85%        |
+| Kmeans (n=100)    | 84.38%         | 116.72%       |
+| Kmeans (n=50)     | 82.01%         | 15.48%        |
+
+Results are from best cluster in training
+Train/Test = 60/40
+Train: 2017/06/02 - 2019/08/06
+Test: 2019/08/06 - 2020/10/20

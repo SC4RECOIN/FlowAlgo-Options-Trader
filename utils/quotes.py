@@ -19,7 +19,6 @@ class Quotes(object):
 
         self.key = os.environ["POLYGON_KEY"]
         self.valid_tickers = list(self.cache.keys())
-        print(f"{len(self.valid_tickers)} valid tickers")
 
     def get_quote(self, symbol: str, date: str) -> float:
         return self.cache[symbol][date]

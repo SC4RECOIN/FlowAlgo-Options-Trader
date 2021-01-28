@@ -1,4 +1,4 @@
-# FlowAlgo Trader
+# FlowAlgo Options Trader
 
 Trade on options flow from [flowalgo.com](http://flowalgo.com/)
 
@@ -51,7 +51,7 @@ NOTE: The backfill results are due to overfitting via parameter selection. The m
 
 ## Clustering Strategy
 
-Thhe options data is encoded and clustered. The below results are from the cluster with the highest returns on training data. The data is split 60/40 (test/train).
+The options data is encoded and clustered. The below results are from the cluster with the highest returns on training data. The data is split 60/40 (test/train).
 
 ### Results
 
@@ -62,12 +62,12 @@ Thhe options data is encoded and clustered. The below results are from the clust
 | Kmeans (n=100)    | 62.92%         | 21.68%        |
 | Kmeans (n=250)    | 133.24%        | 11.91%        |
 
-Train: 2017/06/02 - 2019/08/06
+Train: 2017/06/02 - 2019/08/06  
 Test: 2019/08/06 - 2020/10/20
 
-What about only training on more recent data? The market was very different is 2017 bvs 2018.
+**What about only training on more recent data?** The market was very different is 2017 bvs 2018.
 
-Results on kmeans(n=100):
+Results on kmeans(n=100):  
 train/test => 61.73%/102.02%
 
 ### Environment

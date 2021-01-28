@@ -91,10 +91,7 @@ def test(encodings, df, target_cluster):
 
 
 def main(encodings, df):
-    return clustering(encodings, df, KMeans, {"n_clusters":200, "random_state":random_state})
-    # clustering(encodings, df, MeanShift, {n_jobs=-1})
-    # clustering(encodings, df, DBSCAN, {"eps": 0.5, "min_samples": 5})
-
+    return clustering(encodings, df, KMeans, {"n_clusters":100})
 
 if __name__ == "__main__":
     df = pd.read_pickle("cache/encoded_rows.pkl")

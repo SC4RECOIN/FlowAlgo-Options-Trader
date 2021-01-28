@@ -244,7 +244,6 @@ class PPG:
         )
 
         # the proposed auxiliary phase training
-        # where the value is distilled into the policy network, while making sure the policy network does not change the action predictions (kl div loss)
         for epoch in range(self.epochs_aux):
             for states, old_action_probs, rewards, old_values in tqdm(
                 dl, desc=f"auxiliary epoch {epoch}"

@@ -7,6 +7,8 @@ from sklearn.cluster import KMeans, MeanShift, DBSCAN
 import matplotlib.pyplot as plt
 from joblib import dump, load
 from utils.trader import Trader
+import joblib
+from sklearn.preprocessing import MinMaxScaler
 
 random_state = 42
 
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     df = pd.read_pickle("cache/encoded_rows.pkl")
     print(df.head())
 
-    encoded = np.load("cache/data.npy").astype(np.float32)
+    encoded = np.load("cache/unscaled_data.npy").astype(np.float32)
     assert len(encoded) == len(df)
 
     trader = Trader()
@@ -119,6 +121,12 @@ if __name__ == "__main__":
     encoded, encoded_test = encoded[:split], encoded[split:]
     df, df_test = df.iloc[:split], df.iloc[split:]
     print(encoded.shape)
+
+    # scale
+    scaler = MinMaxScaler()
+    scaler.fit(encoded)
+    encoded, encoded_test = scaler.transform(encoded), scaler.transform(encoded_test)
+    joblib.dump(scaler, "cache/cluster_scaler.gz")
 
     target_cluster = main(encoded, df)
     test(encoded_test, df_test, target_cluster)

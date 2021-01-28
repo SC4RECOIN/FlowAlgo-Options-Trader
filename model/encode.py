@@ -161,16 +161,17 @@ for idx, row in tqdm(df.iterrows(), total=len(df)):
     except Exception as e:
         print(e)
 
+data = np.array(data)
 new_df = pd.DataFrame(rows)
 new_df.to_pickle("../cache/encoded_rows.pkl")
+np.save("../cache/unscaled_data.npy", data)
 
 # scale
-data = np.array(data)
 scaler = MinMaxScaler()
 data = scaler.fit_transform(data)
 joblib.dump(scaler, "../cache/scaler.gz")
 
-np.save("../cache/data.npy", data)
+# np.save("../cache/data.npy", data)
 print(data.shape)
 
 assert len(data) == len(rows)

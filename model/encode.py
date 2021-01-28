@@ -171,7 +171,7 @@ scaler = MinMaxScaler()
 data = scaler.fit_transform(data)
 joblib.dump(scaler, "../cache/scaler.gz")
 
-# np.save("../cache/data.npy", data)
+np.save("../cache/data.npy", data)
 print(data.shape)
 
 assert len(data) == len(rows)

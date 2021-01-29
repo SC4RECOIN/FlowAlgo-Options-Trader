@@ -165,6 +165,10 @@ if __name__ == "__main__":
     encoded = np.array(valid_x)
     assert len(encoded) == len(df)
 
+    # only use subset of data
+    split = int(0.4 * len(encoded))
+    df, encoded = df.iloc[split:], encoded[split:]
+
     split = int(0.6 * len(encoded))
     encoded, encoded_test = encoded[:split], encoded[split:]
     df, df_test = df.iloc[:split], df.iloc[split:]
@@ -179,4 +183,4 @@ if __name__ == "__main__":
     target_cluster = main(encoded, df)
 
     # train dqn model
-    main(encoded, df, lr=0.001, critic_hidden_dim=128)
+    main(encoded, df, lr=0.001, critic_hidden_dim=128, gamma=0.999)

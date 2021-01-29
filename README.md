@@ -65,10 +65,10 @@ The options data is encoded and clustered. The below results are from the cluste
 Train: 2017/06/02 - 2019/08/06  
 Test: 2019/08/06 - 2020/10/20
 
-**What about only training on more recent data?** The market was very different is 2017 bvs 2018.
+**What about only training on more recent data?** The market was very different is 2017 vs 2018.
 
 Results on kmeans(n=100):  
-train/test => 61.73%/102.02%
+train/test => 116.18%/36.53%
 
 ### Environment
 

@@ -3,7 +3,7 @@ import gym
 import torch
 import numpy as np
 
-env_id = "CartPole-v0"
+env_id = "MountainCar-v0"
 env = gym.make(env_id)
 
 seed = 777
@@ -22,7 +22,7 @@ env.seed(seed)
 
 
 # parameters
-num_frames = 20000
+num_frames = 100000
 memory_size = 1000
 batch_size = 32
 target_update = 100

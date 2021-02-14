@@ -3,7 +3,7 @@ import pandas as pd
 import arrow
 from tqdm import tqdm
 from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans, MeanShift, DBSCAN
+from sklearn.cluster import KMeans, MeanShift, DBSCAN, AgglomerativeClustering
 import matplotlib.pyplot as plt
 from joblib import dump, load
 from utils.trader import Trader
@@ -21,7 +21,7 @@ def visualize(encodings):
     plt.show()
 
 
-def clustering(encodings, df, method, params, topn=3):
+def clustering(encodings, df, method, params, topn=1):
     clusters = method(**params).fit(encodings)
     dump(clusters, "clustering.joblib")
 
@@ -89,6 +89,8 @@ def test(encodings, df, target_clusters):
 
 def main(encodings, df, topn):
     return clustering(encodings, df, KMeans, {"n_clusters": 100}, topn)
+    # return clustering(encodings, df, DBSCAN, {"eps": 0.3}, topn)
+    # return clustering(encodings, df, AgglomerativeClustering, {"n_clusters": 75}, 1)
 
 
 if __name__ == "__main__":

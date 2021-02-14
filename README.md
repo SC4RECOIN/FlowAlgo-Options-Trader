@@ -61,6 +61,7 @@ The options data is encoded and clustered. The below results are from the cluste
 | Kmeans (n=50)     | 82.01%         | 15.48%        |
 | Kmeans (n=100)    | 62.92%         | 21.68%        |
 | Kmeans (n=250)    | 133.24%        | 11.91%        |
+| DBSCAN (eps=0.3)  | 55.59%         | -11.26%       |
 
 Train: 2017/06/02 - 2019/08/06  
 Test: 2019/08/06 - 2020/10/20

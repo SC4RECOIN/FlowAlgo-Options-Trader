@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-import gym
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import random
 
 from model.replay import ReplayBuffer
 
@@ -30,7 +30,8 @@ class Network(nn.Module):
 class DQNAgent:
     def __init__(
         self,
-        env: gym.Env,
+        env,
+        obs_dim,
         memory_size: int,
         batch_size: int,
         target_update: int,
@@ -52,8 +53,8 @@ class DQNAgent:
             min_epsilon (float): min value of epsilon
             gamma (float): discount factor
         """
-        obs_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
+        obs_dim = obs_dim
+        action_dim = 2
 
         self.env = env
         self.memory = ReplayBuffer(obs_dim, memory_size, batch_size)
@@ -87,7 +88,7 @@ class DQNAgent:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random():
-            selected_action = self.env.action_space.sample()
+            selected_action = random.randint(0, 1)
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -101,7 +102,7 @@ class DQNAgent:
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
-        next_state, reward, done, _ = self.env.step(action)
+        next_state, reward, done = self.env.step(action)
 
         if not self.is_test:
             self.transition += [reward, next_state, done]
@@ -162,30 +163,6 @@ class DQNAgent:
                 # if hard update is needed
                 if update_cnt % self.target_update == 0:
                     self._target_hard_update()
-
-        self.env.close()
-
-    def test(self) -> List[np.ndarray]:
-        """Test the agent."""
-        self.is_test = True
-
-        state = self.env.reset()
-        done = False
-        score = 0
-
-        frames = []
-        while not done:
-            self.env.render()
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
-
-            state = next_state
-            score += reward
-
-        print("score: ", score)
-        self.env.close()
-
-        return frames
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         """Return dqn loss."""

@@ -180,7 +180,7 @@ if __name__ == "__main__":
     encoded, encoded_test = scaler.transform(encoded), scaler.transform(encoded_test)
     joblib.dump(scaler, "cache/cluster_scaler.gz")
 
-    target_cluster = main(encoded, df)
+    main(encoded, df)
 
     # train dqn model
     main(encoded, df, lr=0.001, critic_hidden_dim=128, gamma=0.999)

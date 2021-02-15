@@ -3,12 +3,12 @@ import pandas as pd
 import arrow
 from tqdm import tqdm
 from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans, MeanShift, DBSCAN
+from sklearn.cluster import KMeans, MeanShift, DBSCAN, AgglomerativeClustering
 import matplotlib.pyplot as plt
 from joblib import dump, load
 from utils.trader import Trader
 import joblib
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 random_state = 42
 
@@ -21,9 +21,9 @@ def visualize(encodings):
     plt.show()
 
 
-def clustering(encodings, df, method, params):
+def clustering(encodings, df, method, params, topn=1):
     clusters = method(**params).fit(encodings)
-    dump(clusters, 'clustering.joblib')
+    dump(clusters, "clustering.joblib")
 
     # check each cluster for profitability
     n_clusters = len(set(clusters.labels_))
@@ -32,8 +32,7 @@ def clustering(encodings, df, method, params):
     if -1 in clusters.labels_:
         n_clusters -= 1
 
-    best = 0
-    best_score = 0
+    scores = []
 
     print(f"{n_clusters} number of clusters")
     for i in range(n_clusters):
@@ -55,19 +54,15 @@ def clustering(encodings, df, method, params):
                 ticker = row["Ticker"]
                 trader.trade_on_signal(ticker, "BULLISH", current_price, expiry)
 
-        reward = trader.current_reward
-        print(f"cluster {i}\treturn: {reward:.2f}%")
+        scores.append(trader.current_reward)
+        print(f"cluster {i}\treturn: {scores[-1]:.2f}%")
 
-        if reward > best_score:
-            best_score = reward
-            best = i 
-        
-    print(f"best {best}")
-    return best
+    top = sorted(scores, reverse=True)[:topn]
+    return [scores.index(s) for s in top]
 
 
-def test(encodings, df, target_cluster):
-    clusters = load('clustering.joblib')
+def test(encodings, df, target_clusters):
+    clusters = load("clustering.joblib")
 
     trader = Trader()
     day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
@@ -82,18 +77,21 @@ def test(encodings, df, target_cluster):
             day = current_day
 
         # if target cluster, buy
-        if clusters.labels_[idx] == target_cluster:
+        if clusters.labels_[idx] in target_clusters:
             current_price = row["Spot"]
             expiry = row["Expiry"].format("YYYY-MM-DD")
             ticker = row["Ticker"]
             trader.trade_on_signal(ticker, "BULLISH", current_price, expiry)
 
     print(f"end {current_day}")
-    print(f"cluster {target_cluster}\treturn: {trader.current_reward:.2f}%")
+    print(f"cluster {target_clusters}\treturn: {trader.current_reward:.2f}%")
 
 
-def main(encodings, df):
-    return clustering(encodings, df, KMeans, {"n_clusters":100})
+def main(encodings, df, topn):
+    return clustering(encodings, df, KMeans, {"n_clusters": 100}, topn)
+    # return clustering(encodings, df, DBSCAN, {"eps": 0.3}, topn)
+    # return clustering(encodings, df, AgglomerativeClustering, {"n_clusters": 75}, 1)
+
 
 if __name__ == "__main__":
     df = pd.read_pickle("cache/encoded_rows.pkl")
@@ -117,6 +115,11 @@ if __name__ == "__main__":
     encoded = np.array(valid_x)
     assert len(encoded) == len(df)
 
+    # REMOVE
+    split = int(0.4 * len(encoded))
+    df, encoded = df.iloc[split:], encoded[split:]
+    ########
+
     split = int(0.6 * len(encoded))
     encoded, encoded_test = encoded[:split], encoded[split:]
     df, df_test = df.iloc[:split], df.iloc[split:]
@@ -128,5 +131,5 @@ if __name__ == "__main__":
     encoded, encoded_test = scaler.transform(encoded), scaler.transform(encoded_test)
     joblib.dump(scaler, "cache/cluster_scaler.gz")
 
-    target_cluster = main(encoded, df)
-    test(encoded_test, df_test, target_cluster)
+    target_clusters = main(encoded, df, 1)
+    test(encoded_test, df_test, target_clusters)

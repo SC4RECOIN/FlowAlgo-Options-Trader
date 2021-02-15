@@ -61,14 +61,15 @@ The options data is encoded and clustered. The below results are from the cluste
 | Kmeans (n=50)     | 82.01%         | 15.48%        |
 | Kmeans (n=100)    | 62.92%         | 21.68%        |
 | Kmeans (n=250)    | 133.24%        | 11.91%        |
+| DBSCAN (eps=0.3)  | 55.59%         | -11.26%       |
 
 Train: 2017/06/02 - 2019/08/06  
 Test: 2019/08/06 - 2020/10/20
 
-**What about only training on more recent data?** The market was very different is 2017 bvs 2018.
+**What about only training on more recent data?** The market was very different is 2017 vs 2018.
 
 Results on kmeans(n=100):  
-train/test => 61.73%/102.02%
+train/test => 116.18%/36.53%
 
 ### Environment
 

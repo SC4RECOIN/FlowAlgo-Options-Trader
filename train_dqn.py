@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import joblib
+import arrow
 from utils.trader import Trader
 
 
@@ -35,6 +36,7 @@ class TraderEnv(object):
         split = int(0.6 * len(encoded))
         encoded, encoded_test = encoded[:split], encoded[split:]
         self.df, self.df_test = df.iloc[:split], df.iloc[split:]
+        self.day = arrow.get(self.df["Time"].iloc[0].format("YYYY-MM-DD"))
 
         # scale
         scaler = MinMaxScaler()
@@ -45,11 +47,14 @@ class TraderEnv(object):
         joblib.dump(scaler, "cache/dqn_scaler.gz")
 
     def step(self, action):
-        ###
-        # Check for new trading day
-        ###
-
         row = self.df.iloc[self.current_step]
+
+        # new day, check expiries
+        current_day = arrow.get(row["Time"].format("YYYY-MM-DD"))
+        if current_day != self.day:
+            self.trader.eod(self.day.format("YYYY-MM-DD"))
+            self.day = current_day
+
         if action == 0:
             current_price = row["Spot"]
             expiry = row["Expiry"].format("YYYY-MM-DD")
@@ -59,7 +64,7 @@ class TraderEnv(object):
         next_state = self.encoded[self.current_step]
         self.current_step += 1
         reward = self.trader.current_reward
-        done = reward < -50 and self.current_step == len(self.encoded)
+        done = reward < -50 or self.current_step == len(self.encoded)
 
         print(reward)
 
@@ -68,6 +73,7 @@ class TraderEnv(object):
     def reset(self):
         self.trader = Trader()
         self.current_step = 1
+        self.day = arrow.get(self.df["Time"].iloc[0].format("YYYY-MM-DD"))
         return self.encoded[0]
 
 

@@ -66,8 +66,6 @@ class TraderEnv(object):
         reward = self.trader.current_reward
         done = reward < -50 or self.current_step == len(self.encoded)
 
-        print(reward)
-
         return next_state, reward, done
 
     def reset(self):
@@ -91,10 +89,10 @@ np.random.seed(seed)
 seed_torch(seed)
 
 # parameters
-num_frames = 100000
-memory_size = 1000
+num_frames = int(1e7)
+memory_size = 10000
 batch_size = 32
-target_update = 100
+target_update = 1000
 epsilon_decay = 1 / 2000
 
 env = TraderEnv()
@@ -105,5 +103,6 @@ agent = DQNAgent(
     batch_size,
     target_update,
     epsilon_decay,
+    gamma=0.999,
 )
 agent.train(num_frames)

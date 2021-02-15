@@ -40,19 +40,6 @@ class DQNAgent:
         min_epsilon: float = 0.1,
         gamma: float = 0.99,
     ):
-        """Initialization.
-
-        Args:
-            env (gym.Env): openAI Gym environment
-            memory_size (int): length of memory
-            batch_size (int): batch size for sampling
-            target_update (int): period for target model's hard update
-            epsilon_decay (float): step size to decrease epsilon
-            lr (float): learning rate
-            max_epsilon (float): max value of epsilon
-            min_epsilon (float): min value of epsilon
-            gamma (float): discount factor
-        """
         obs_dim = obs_dim
         action_dim = 2
 
@@ -133,18 +120,22 @@ class DQNAgent:
         scores = []
         score = 0
 
-        for frame_idx in tqdm(range(1, num_frames + 1), total=num_frames):
+        pbar = tqdm(range(1, num_frames + 1), total=num_frames)
+        for frame_idx in pbar:
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
 
+            if frame_idx % 1000 == 0:
+                pbar.set_description(
+                    f"episode: {len(scores) + 1} | return {reward:.2f}%"
+                )
+
             state = next_state
-            score += reward
 
             # if episode ends
             if done:
                 state = self.env.reset()
-                scores.append(score)
-                score = 0
+                scores.append(reward)
 
             # if training is ready
             if len(self.memory) >= self.batch_size:
@@ -185,23 +176,3 @@ class DQNAgent:
 
     def _target_hard_update(self):
         self.dqn_target.load_state_dict(self.dqn.state_dict())
-
-    def _plot(
-        self,
-        frame_idx: int,
-        scores: List[float],
-        losses: List[float],
-        epsilons: List[float],
-    ):
-        """Plot the training progresses."""
-        plt.figure(figsize=(20, 5))
-        plt.subplot(131)
-        plt.title("frame %s. score: %s" % (frame_idx, np.mean(scores[-10:])))
-        plt.plot(scores)
-        plt.subplot(132)
-        plt.title("loss")
-        plt.plot(losses)
-        plt.subplot(133)
-        plt.title("epsilons")
-        plt.plot(epsilons)
-        plt.show()

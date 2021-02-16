@@ -34,8 +34,7 @@ def clustering(encodings, df, method, params, topn=1):
 
     scores = []
 
-    print(f"{n_clusters} number of clusters")
-    for i in range(n_clusters):
+    for i in tqdm(range(n_clusters), total=n_clusters):
         trader = Trader()
         day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
 
@@ -55,7 +54,6 @@ def clustering(encodings, df, method, params, topn=1):
                 trader.trade_on_signal(ticker, "BULLISH", current_price, expiry)
 
         scores.append(trader.current_reward)
-        print(f"cluster {i}\treturn: {scores[-1]:.2f}%")
 
     top = sorted(scores, reverse=True)[:topn]
     return [scores.index(s) for s in top]
@@ -66,7 +64,7 @@ def test(encodings, df, target_clusters):
 
     trader = Trader()
     day = arrow.get(df["Time"].iloc[0].format("YYYY-MM-DD"))
-    print(f"start {day}")
+    print(f"start {day.format('YYYY-MM-DD')}")
 
     for idx, row in df.iterrows():
         current_day = arrow.get(row["Time"].format("YYYY-MM-DD"))
@@ -83,7 +81,7 @@ def test(encodings, df, target_clusters):
             ticker = row["Ticker"]
             trader.trade_on_signal(ticker, "BULLISH", current_price, expiry)
 
-    print(f"end {current_day}")
+    print(f"end {current_day.format('YYYY-MM-DD')}")
     print(f"cluster {target_clusters}\treturn: {trader.current_reward:.2f}%")
 
 
@@ -115,21 +113,21 @@ if __name__ == "__main__":
     encoded = np.array(valid_x)
     assert len(encoded) == len(df)
 
-    # REMOVE
-    split = int(0.4 * len(encoded))
-    df, encoded = df.iloc[split:], encoded[split:]
-    ########
+    step = 35000
+    for i in range(70000, len(encoded), step):
+        _encoded = encoded[i - 70000 : i]
+        _df = df.iloc[i - 70000 : i]
 
-    split = int(0.6 * len(encoded))
-    encoded, encoded_test = encoded[:split], encoded[split:]
-    df, df_test = df.iloc[:split], df.iloc[split:]
-    print(encoded.shape)
+        split = int(0.7 * len(_encoded))
+        _encoded, _encoded_test = _encoded[:split], _encoded[split:]
+        _df, _df_test = _df.iloc[:split], _df.iloc[split:]
 
-    # scale
-    scaler = MinMaxScaler()
-    scaler.fit(encoded)
-    encoded, encoded_test = scaler.transform(encoded), scaler.transform(encoded_test)
-    joblib.dump(scaler, "cache/cluster_scaler.gz")
+        # scale
+        scaler = MinMaxScaler()
+        scaler.fit(_encoded)
+        _encoded = scaler.transform(_encoded)
+        _encoded_test = scaler.transform(_encoded_test)
+        joblib.dump(scaler, "cache/cluster_scaler.gz")
 
-    target_clusters = main(encoded, df, 1)
-    test(encoded_test, df_test, target_clusters)
+        target_clusters = main(_encoded, _df, 1)
+        test(_encoded_test, _df_test, target_clusters)
